@@ -11,7 +11,13 @@ Encoding: UTF-8
 LazyData: true
 Imports: 
     dplyr,
+    ggplot2,
+    haven,
     labelled,
+    lme4,
     magrittr,
-    tidyr
+    readxl,
+    stats,
+    tidyr,
+    zoo
 RoxygenNote: 7.2.3

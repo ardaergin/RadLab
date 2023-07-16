@@ -7,7 +7,7 @@
 #'
 #' @examples converted_dataframe <- convert.df(spss_imported_dataframe)
 
-convert.df <- function(data) {
+convert_df <- function(data) {
 
   ##### Fixing "" data (if there is any) #####
   data <- as.data.frame(data) %>%
