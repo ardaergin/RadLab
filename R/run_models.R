@@ -1,5 +1,6 @@
 run_models <- function(data,
-                       optimizer = "Nelder_Mead"){
+                       optimizer = "Nelder_Mead",
+                       mega = FALSE){
 
   # Setup
   action_options = c("ina", "na", "nna", "enna")
@@ -18,14 +19,18 @@ run_models <- function(data,
     # Print the Model Name
     cat(paste("Running Linear Model for", action_option, "\n"))
 
+    # Formula
+    LM_formula = paste(
+      action_option,
+      " ~
+      time +
+      excluded + injustice + personal + violence +
+      gender_f + age",
+      if (mega == TRUE){"+ Experiment"})
+
     # The Model
     M_LM <- stats::lm(
-      formula = paste(
-        # Dependent Variable:
-        action_option, " ~
-          time +
-          excluded + injustice + personal + violence +
-          gender_f + age"),
+      formula = LM_formula,
       data = data)
 
     # Saving it to the List
@@ -35,14 +40,19 @@ run_models <- function(data,
     # Print the Model Name
     cat(paste("Running Simple Linear Mixed Effect Model for", action_option, "\n"))
 
+    # Formula
+    LMER1_formula = paste(
+      action_option,
+      " ~
+      time +
+      excluded + injustice + personal + violence +
+      gender_f + age +
+      (1|ID)",
+      if (mega == TRUE){"+ Experiment"})
+
     # The Model
     M_LMER_simple <- lmerTest::lmer(
-      formula = paste(
-        action_option, " ~
-        time +
-        excluded + injustice + personal + violence +
-        gender_f + age +
-        (1|ID)"),
+      formula = LMER1_formula,
       REML = F,
       control = lmerControl(optimizer = optimizer),
       data = data)
@@ -54,14 +64,19 @@ run_models <- function(data,
     # Print the Model Name
     cat(paste("Running Complex Linear Mixed Effect Model for", action_option, "\n"))
 
+    # Formula
+    LMER2_formula = paste(
+      action_option,
+      " ~
+      time +
+      excluded + injustice + personal + violence +
+      gender_f + age +
+      (1 + time|ID)",
+      if (mega == TRUE){"+ Experiment"})
+
     # The Model
     M_LMER_complex <- lmerTest::lmer(
-      formula = paste(
-        action_option, " ~
-        time +
-        excluded + injustice + personal + violence +
-        gender_f + age +
-        (1 + time|ID)"),
+      formula = LMER2_formula,
       REML = F,
       control = lmerControl(optimizer = optimizer),
       data = data)
