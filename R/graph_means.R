@@ -43,7 +43,7 @@ graph_means <- function(
 
 
   # Checking if they all sum up to a 100:
-  if (all(rowSums(v.means[1:4])==100)){
+  if (all(rowSums(v.means[1:4]) == 100)){
     print("all rows sum up to a 100, so everything is good!")
   }
 
@@ -64,7 +64,7 @@ graph_means <- function(
       ggplot2::geom_point() +
 
       ggplot2::scale_x_discrete(
-        limits = factor(1:15),
+        limits = factor(1:n_vignettes),
         labels = v.means_with_names$Vignette) +
 
       ggplot2::theme(
