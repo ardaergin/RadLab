@@ -1,6 +1,5 @@
-
-
-run_models <- function(data){
+run_models <- function(data,
+                       optimizer = "Nelder_Mead"){
 
   # Setup
   action_options = c("ina", "na", "nna", "enna")
@@ -45,6 +44,7 @@ run_models <- function(data){
         gender_f + age +
         (1|ID)"),
       REML = F,
+      control = lmerControl(optimizer = optimizer),
       data = data)
 
     # Saving it to the List
@@ -63,7 +63,7 @@ run_models <- function(data){
         gender_f + age +
         (1 + time|ID)"),
       REML = F,
-      control = lmerControl(optimizer = "Nelder_Mead"),
+      control = lmerControl(optimizer = optimizer),
       data = data)
 
     # Saving it to the List
