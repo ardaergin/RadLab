@@ -10,7 +10,7 @@
 
 get_model_results <- function(models_list,
                               the_model = "M_LMER_complex"){
-RadLab::run_models()
+
   # For loop for the 4 action options
   for (i in 1:4){
 
