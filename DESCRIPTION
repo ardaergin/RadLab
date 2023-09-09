@@ -17,6 +17,7 @@ Imports:
     lme4,
     lmerTest,
     magrittr,
+    MuMIn,
     optimx,
     readxl,
     stats,
