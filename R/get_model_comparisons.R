@@ -19,14 +19,6 @@ get_model_comparisons <- function(models_list){
       models_list[["na"]][["M_LMER_complex"]])$knitr,
     "\n--------\n"
   )
-  # NNA
-  cat(
-    sjPlot::tab_model(
-      models_list[["nna"]][["M_LM"]],
-      models_list[["nna"]][["M_LMER_simple"]],
-      models_list[["nna"]][["M_LMER_complex"]])$knitr,
-    "\n--------\n"
-  )
   # ENNA
   cat(
     sjPlot::tab_model(
