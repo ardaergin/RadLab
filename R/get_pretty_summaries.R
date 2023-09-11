@@ -16,12 +16,13 @@ get_pretty_summaries <- function(
   }
 
   if (model_comparison == TRUE){
-      for(i in 1:4){
+    action_options <- c("ina", "na", "nna", "enna")
+      for(action_option in action_options){
         cat(
           sjPlot::tab_model(
-            models_list[[i]][["M_LM"]],
-            models_list[[i]][["M_LMER_simple"]],
-            models_list[[i]][["M_LMER_complex"]])$knitr,
+            models_list[[action_option]][["M_LM"]],
+            models_list[[action_option]][["M_LMER_simple"]],
+            models_list[[action_option]][["M_LMER_complex"]])$knitr,
           "\n--------\n"
         )
       }
