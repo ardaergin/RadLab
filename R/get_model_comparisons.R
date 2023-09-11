@@ -1,7 +1,7 @@
 
-get_model_comparisons <- function(x){
+get_model_comparisons <- function(models_list){
   # For some reason, the for loop does not work here
-  
+
   cat("\n--------\n")
   # INA
   cat(
@@ -37,4 +37,4 @@ get_model_comparisons <- function(x){
   )
 }
 
-  
+
