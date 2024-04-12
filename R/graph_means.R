@@ -15,7 +15,8 @@
 graph_means <- function(
     data,
     name_data,
-    n_vignettes){
+    n_vignettes,
+    label_x = TRUE){
 
   ##### Calculating #####
   # Calculating means and storing them:
@@ -56,29 +57,32 @@ graph_means <- function(
 
 
   ##### Plotting #####
-  print(
+  the_plot <- ggplot2::autoplot(
+    zoo::zoo(v.means_with_names[2:5]),
+    facet = NULL) +
 
-    ggplot2::autoplot(zoo::zoo(v.means_with_names[2:5]),
-                      facet = NULL) +
+    ggplot2::geom_point() +
 
-      ggplot2::geom_point() +
+    ggplot2::theme_classic() +
 
-      ggplot2::scale_x_discrete(
-        limits = factor(1:n_vignettes),
-        labels = v.means_with_names$Vignette) +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(
+        color = "black", size = 9,
+        angle = 45, hjust = 1)) +
 
-      ggplot2::theme(
-        axis.text.x = ggplot2::element_text(
-          color = "black", size = 9,
-          angle = 45, hjust = 1)) +
+    ggplot2::scale_color_discrete(
+      name = "Action Type",
+      labels = c("Inaction",
+                 "Normative Action",
+                 "Non-normative Action",
+                 "Extreme Non-normative Action"))
 
-      ggplot2::scale_color_discrete(
-        name = "Action Type",
-        labels = c("Inaction",
-                   "Normative Action",
-                   "Non-normative Action",
-                   "Extreme Non-normative Action"))
-  )
+  if (label_x) {
+    the_plot <- the_plot + ggplot2::scale_x_discrete(
+      limits = factor(1:n_vignettes),
+      labels = v.means_with_names$Vignette)
+  }
 
+  return(the_plot)
 }
 
