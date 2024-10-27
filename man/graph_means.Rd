@@ -4,7 +4,7 @@
 \alias{graph_means}
 \title{Graph Vignette Means from Data}
 \usage{
-graph_means(data, name_data, n_vignettes)
+graph_means(data, name_data, n_vignettes, label_x = TRUE)
 }
 \arguments{
 \item{data}{a data frame with only data from vignette responses}
