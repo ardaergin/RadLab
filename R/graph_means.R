@@ -46,6 +46,8 @@ graph_means <- function(
   # Checking if they all sum up to a 100:
   if (all(rowSums(v.means[1:4]) == 100)){
     print("all rows sum up to a 100, so everything is good!")
+  } else{
+    print(rowSums(v.means[1:4]) == 100)
   }
 
   # Adding the Names of Vignettes
