@@ -1,0 +1,790 @@
+---
+title: "aaa"
+output: html_document
+date: "2023-09-11"
+---
+
+
+# Setup
+IMPORTANT FOR THE USER OF THIS SCRIPT: you have to load the R package "**RadLab**". This is necessary for the code to work properly. See [the GitHub repository](https://github.com/ardaergin/RadLab) for further information.           
+
+The code below loads the RadLab package, you need to download the "devtools" package first, you can do so with install.packages("devtools").
+```{r, message=FALSE, warning=FALSE}
+# First install the package with: 
+devtools::install_github("ardaergin/RadLab")
+library(RadLab)
+library(dplyr)
+library(haven)
+library(stats)
+library(lme4)
+library(lmerTest)
+library(optimx)
+
+```
+
+
+
+# -------------
+
+
+
+### Modelling
+
+
+```{r}
+# Load necessary libraries
+library(compositions)
+library(zCompositions)
+library(lme4)
+library(dplyr)
+library(ggplot2)
+
+# Prepare your data
+df <- d_study1_long %>%
+  mutate(
+    inaction_prop = ina / 100,
+    normative_prop = na / 100,
+    nonnormative_prop = nna / 100,
+    extreme_nonnormative_prop = enna / 100
+  )
+
+# Create a matrix of the compositional data
+comp_matrix <- as.matrix(
+  df[, c('inaction_prop',
+         'normative_prop',
+         'nonnormative_prop',
+         'extreme_nonnormative_prop')]
+)
+
+# Replace zeros using the multiplicative replacement method
+comp_matrix_nozeros <- cmultRepl(
+  comp_matrix, method = "CZM", output = "prop", label = 0
+)
+
+# Use zPatterns to see the pattern of zeros
+zPatterns(comp_matrix, label = 0)
+
+# Create acomp object with labels
+comp_data <- acomp(comp_matrix_nozeros)
+
+# Perform ilr transformation
+ilr_data <- ilr(comp_data)
+
+# Convert ilr_data to a data frame and name the columns
+ilr_df <- as.data.frame(ilr_data)
+colnames(ilr_df) <- c('ilr1', 'ilr2', 'ilr3')
+
+# Combine with your original data
+df_ilr <- cbind(df, ilr_df)
+
+# Exclude rows with NA in 'gender_f' before modeling
+df_ilr <- df_ilr %>%
+  filter(!is.na(gender_f))
+
+# Ensure 'gender_f' is a factor with correct levels
+df_ilr$gender_f <- factor(df_ilr$gender_f, levels = c("Female", "Male"))
+
+# Fit the models without NAs
+model_ilr1 <- lmer(
+  ilr1 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+model_ilr2 <- lmer(
+  ilr2 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+model_ilr3 <- lmer(
+  ilr3 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+# Predict ilr values using fixed effects only
+pred_ilr1 <- predict(model_ilr1, newdata = df_ilr, re.form = NA)
+pred_ilr2 <- predict(model_ilr2, newdata = df_ilr, re.form = NA)
+pred_ilr3 <- predict(model_ilr3, newdata = df_ilr, re.form = NA)
+
+# Back-transform to compositional proportions
+pred_ilr_full <- data.frame(ilr1 = pred_ilr1, ilr2 = pred_ilr2, ilr3 = pred_ilr3)
+pred_comp <- ilrInv(pred_ilr_full)
+
+# Assign unique component names to predicted proportions
+colnames(pred_comp) <- c('pred_inaction_prop', 'pred_normative_prop', 'pred_nonnormative_prop', 'pred_extreme_nonnormative_prop')
+
+# Add predicted proportions to df_ilr
+df_ilr <- cbind(df_ilr, pred_comp)
+```
+
+
+
+
+### Modelling New
+
+
+
+```{r}
+# Model ilr1 as a function of time and extremity, with random intercepts and slopes for each participant
+model_ilr1 <- lmer(
+  ilr1 ~ time + 
+    excluded + injustice + personal + violence + 
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr,
+  na.action = na.exclude
+)
+
+model_ilr2 <- lmer(
+  ilr2 ~ time + 
+    excluded + injustice + personal + violence + 
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr,
+  na.action = na.exclude
+)
+
+model_ilr3 <- lmer(
+  ilr3 ~ time + 
+    excluded + injustice + personal + violence + 
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr,
+  na.action = na.exclude
+)
+```
+
+
+```{r}
+# List of predictor variables
+predictor_vars <- c("time", "excluded", "injustice", "personal", "violence", "gender_f", "age")
+
+# Check if all predictor variables are present in df_ilr
+all(predictor_vars %in% names(df_ilr))
+
+# Check for NA values in predictor variables
+sapply(df_ilr[, predictor_vars], function(x) sum(is.na(x)))
+
+df_ilr_complete <- df_ilr %>%
+  filter(complete.cases(.[, predictor_vars]))
+
+
+# Predict ilr1 values using fixed effects only
+pred_ilr1 <- predict(model_ilr1, newdata = df_ilr, re.form = NA)
+
+# Similarly for ilr2 and ilr3
+pred_ilr2 <- predict(model_ilr2, newdata = df_ilr, re.form = NA)
+pred_ilr3 <- predict(model_ilr3, newdata = df_ilr, re.form = NA)
+
+# 3. Back-transform to compositional proportions
+pred_ilr_full <- data.frame(ilr1 = pred_ilr1, ilr2 = pred_ilr2, ilr3 = pred_ilr3)
+pred_comp <- ilrInv(pred_ilr_full)
+colnames(pred_comp) <- c('inaction_prop', 'normative_prop', 'nonnormative_prop', 'extreme_nonnormative_prop')
+
+# 4. Add predictions to df_ilr
+df_ilr <- cbind(df_ilr, pred_comp)
+
+# 5. Visualize results
+ggplot(df_ilr, aes(x = time, y = inaction_prop, group = ID)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = 1), fun = mean, geom = "line", color = "blue", size = 1.5) +
+  labs(title = "Predicted Inaction Proportion Over Time",
+       x = "Time",
+       y = "Predicted Inaction Proportion")
+
+```
+
+
+
+
+```{r}
+# Predict ilr values
+pred_ilr <- predict(model_ilr1, newdata = df_ilr)
+
+# Combine ilr predictions with other ilr components (if needed)
+pred_ilr_full <- cbind(pred_ilr, df_ilr[, c('ilr2', 'ilr3')])
+
+# Back-transform to the compositional space
+pred_comp <- ilrInv(pred_ilr_full)
+
+```
+
+
+```{r}
+# Example plot of predicted inaction proportion over time
+library(ggplot2)
+
+df_ilr$pred_inaction <- pred_comp[, 'inaction_prop']
+
+ggplot(df_ilr, aes(x = time, y = pred_inaction, group = ID)) +
+  geom_line(alpha = 0.3) +
+  stat_smooth(aes(group = 1), method = "loess", se = FALSE, color = "blue") +
+  labs(title = "Predicted Inaction Proportion Over Time",
+       x = "Time",
+       y = "Predicted Inaction Proportion")
+
+```
+
+
+
+
+
+
+
+
+### Modelling
+```{r Study 1 - Modelling}
+study1_models <- d_study1_long %>% RadLab::run_models()
+
+RadLab::get_model_results(models_list = study1_models)
+```
+
+```{r, results='asis'}
+cat(sjPlot::tab_model(
+        study1_models[["na"]][["M_LM"]],
+        study1_models[["na"]][["M_LMER_simple"]],
+        study1_models[["na"]][["M_LMER_complex"]])$knitr)
+```
+
+```{r, results='asis'}
+RadLab::get_pretty_summaries(
+  study1_models)
+
+RadLab::get_model_comparisons(
+  study1_models)
+```
+
+
+### Compositional
+```{r}
+library(compositions)
+library(tidyverse)
+library(robCompositions)
+library(lme4)
+
+# SETUP
+# DV
+Ym = compositions::acomp(d_study1_long[,7:10])
+# IVs
+###### QUESTİON: TAKİNG TİME AS FACTOR???
+Xm0_f = factor(d_study1_long$time, ordered = TRUE)
+Xm0 = d_study1_long$time
+Xm1 = d_study1_long$excluded
+Xm2 = d_study1_long$injustice
+Xm3 = d_study1_long$personal
+Xm4 = d_study1_long$violence
+MIXEDO = d_study1_long$ID
+
+
+# Linear Model
+
+# 'Time' as Continuous
+model_n <- lm(formula = compositions::ilr(Ym) ~ log(Xm0))
+summary(model_n)
+anova(model_n)
+
+# 'Time' as factor
+model_f <- lm(formula = compositions::ilr(Ym) ~ Xm0_f)
+summary(model_f)
+anova(model_f)
+```
+
+
+
+
+```{r}
+d_study1_long[,7:10]
+Utest1 <- zCompositions::lrEM(d_study1_long[,7:10], label = 0, dl = rep(1,4))
+```
+
+
+```{r}
+attach(df3)
+Utest <- data.frame(sed_min, lightlife_min, mod_min, vig_min)
+colnames(Utest) <- c("sed", "light", "mod", "vig") 
+Utest1 <- zCompositions::lrEM(Utest, label = 0, dl = rep(1,4))
+detach(df3)
+
+z1 <- pivotCoord(Utest1, pivotvar = 1)        
+z2 <- pivotCoord(Utest1, pivotvar = 2)
+z3 <- pivotCoord(Utest1, pivotvar = 3)
+z4 <- pivotCoord(Utest1, pivotvar = 4)
+
+ILR.data <- data.frame(z1, z2, z3, z4)
+nhanes2 <- data.frame(Utest1, ILR.data, df3$seqn)
+colnames(nhanes2) [17]  <- "seqn" 
+
+demo_c <- nhanes("DEMO_C")
+
+attach(demo_c)
+demo_2003 <- data.frame(SEQN, WTMEC2YR, RIDAGEYR)
+detach(demo_c)
+colnames(demo_2003) [1]  <- "seqn" 
+
+nhanes4 <- merge(nhanes2, demo_2003, by = "seqn")
+colnames(nhanes4) [(19)] <- "age" 
+
+```
+
+
+```{r}
+# SETUP
+# DV
+Ym = compositions::acomp(d_study1_long[,7:10])
+# IVs
+
+
+###### QUESTİON: TAKİNG TİME AS FACTOR???
+Xm0_f = factor(d_study1_long$time, ordered = TRUE)
+Xm0 = d_study1_long$time
+Xm1 = d_study1_long$excluded
+Xm2 = d_study1_long$injustice
+Xm3 = d_study1_long$personal
+Xm4 = d_study1_long$violence
+MIXEDO = d_study1_long$ID
+
+# Linear Model
+
+# 'Time' as Continuous
+model_n <- lm(formula = compositions::ilr(Ym) ~ log(Xm0))
+summary(model_n)
+anova(model_n)
+
+# 'Time' as factor
+model_f <- lm(formula = compositions::ilr(Ym) ~ Xm0_f)
+summary(model_f)
+anova(model_f)
+
+mixed_model <- lme4::lmer(compositions::ilr(Ym) ~ Xm0 + (1|MIXEDO))
+
+mixed_model <- lmer(Ym_ilr ~ time + (1|ID), data = d_study1_long)
+
+Ym <- compositions::acomp(d_study1_long[, 7:10])
+
+# Applying ilr transformation
+Ym_ilr <- compositions::ilr(Ym)
+
+# Building the model
+mixed_model <- lmer(Ym_ilr ~ time + (1|ID), data = d_study1_long)
+simplified_model <- lmer(Ym_ilr[,1] ~ time + (1|ID), data = d_study1_long)
+
+```
+
+```{r}
+Ym_ilr_df <- as.data.frame(Ym_ilr)
+names(Ym_ilr_df) <- c("Comp1", "Comp2", "Comp3")
+d_study1_long_combined <- cbind(d_study1_long, Ym_ilr_df)
+
+brm_model <- brm(cbind(Comp1, Comp2, Comp3) ~ time + (1|ID),
+                 data = d_study1_long_combined,
+                 family = gaussian(),
+                 chains = 4, iter = 2000)
+summary(brm_model)
+
+```
+
+
+```{r}
+library(MCMCglmm)
+
+# Assuming Ym_ilr is already a part of d_study1_long
+d_study1_long$Comp1 <- Ym_ilr[, 1]
+d_study1_long$Comp2 <- Ym_ilr[, 2]
+d_study1_long$Comp3 <- Ym_ilr[, 3]
+
+# Define priors
+# The V matrix should be a 3x3 matrix because there are 3 response variables
+prior <- list(R = list(V = diag(3), nu = 1),  # nu > 0
+              G = list(G1 = list(V = diag(3), nu = 1)))  # Adjusted priors
+
+# Fit the model
+model <- MCMCglmm(cbind(Comp1, Comp2, Comp3) ~ time,
+                  random = ~idv(ID),
+                  family = c("gaussian", "gaussian", "gaussian"),
+                  prior = prior,
+                  data = d_study1_long,
+                  verbose = FALSE)
+
+summary(model)
+
+library(MCMCglmm)
+
+# Define 3x3 diagonal matrices for priors
+prior_R <- list(V = diag(3), nu = 3)  # Residual errors prior
+prior_G <- list(G1 = list(V = diag(3), nu = 3))  # Random effects prior
+
+# Fit the model
+model <- MCMCglmm(cbind(Comp1, Comp2, Comp3) ~ time,
+                  random = ~us(1|ID),  # Random effects
+                  family = c("gaussian", "gaussian", "gaussian"),
+                  prior = list(R = prior_R, G = prior_G),
+                  data = d_study1_long,
+                  verbose = FALSE)
+
+summary(model)
+
+```
+
+
+
+```{r}
+library("brms")
+brm_model <- brm(cbind(Ym_ilr[, 1], Ym_ilr[, 2], Ym_ilr[, 3]) ~ time + (1|ID),
+                 data = d_study1_long,
+                 family = gaussian(),
+                 chains = 4, iter = 2000)
+summary(brm_model)
+
+```
+
+
+
+# Study 2 (2020-2021)
+
+
+
+## Import
+```{r Study 2 - Import}
+d_study2_0 <- haven::read_spss(
+  'data/2_meike.sav')
+```
+
+
+
+## Exclusion
+```{r Study 2 - Exclusion}
+####### Informed Consent #######
+# First excluding "Informed Consent is NA"
+# Then based on "Informed Consent is 0"
+d_study2_1 <- d_study2_0 %>% 
+  dplyr::filter(!is.na(Consent)) %>% 
+  dplyr::filter(Consent == 1)
+
+## Number of participants excluded based on Informed Consent
+nrow(d_study2_0) - nrow(d_study2_1)
+
+
+####### Progress #######
+d_study2_2 <- d_study2_1 %>% 
+  dplyr::filter(Progress > 95)
+
+## Number of participants excluded based on Progress
+nrow(d_study2_1) - nrow(d_study2_2)
+```
+
+
+
+## Cleaning
+Specifically for this data, in between measures for the vignettes, Meike has a "exclusion" and "fair" measure. They make it difficult to take the relevant columns. Hence, I am first going to delete those columns from the dataset.
+```{r Study 2 - Cleaning}
+####### Columns  #######
+# Only Selecting the Relevant Columns
+d_study2_3 <- d_study2_2 %>% 
+  subset(select = -grep("exclusion_fair|eclusion_fair", names(.))) %>% 
+  subset(select = -c(40:45)) %>% 
+  subset(select = c(20:79,
+                    3, # Condition
+                    80, # Gender (gender)
+                    81, # Age (age)
+                    103, # liberal_conservative_rec
+                    104 # left_right_rec
+                    ))
+
+
+# Assigning ID to the participants:
+d_study2_3$ID <- 
+  nrow(d_study1) + # Number of Participants in Hartog
+  1:nrow(d_study2_3)
+
+# Assigning experiment number to all participants in this dataset
+d_study2_3$Experiment <- 2
+
+# Converting the Columns to Numeric 
+d_study2 <- RadLab::convert_df(d_study2_3)
+```
+
+
+
+## Means Plot
+```{r Study 2 - Means Plot}
+d_study2[, 1:60] %>% RadLab::graph_means(
+  name_data = o_study2,
+  n_vignettes = 15)
+```
+
+
+
+## Data Analysis
+### Structuring Data
+```{r Study2 - Structuring}
+d_study2_long_0 <- d_study2 %>% RadLab::wide_to_long(
+  name_data = o_study2,
+  n_vignettes = 15)
+```
+
+
+
+### Factorizing
+```{r Study 2 - Factorizing}
+##### Factorizing #####
+
+
+# Condition
+d_study2_long_0 <- d_study2_long_0 %>%
+  dplyr::mutate(
+    condition_f = factor(
+      haven::labelled_spss(Condition),
+      levels = 1:3,
+      labels = paste("Condition", 1:3)))
+
+
+# Gender
+d_study2_long_0 <- d_study2_long_0 %>%
+  dplyr::mutate(
+    gender_f = factor(
+      haven::labelled_spss(gender),
+      levels = 1:2,
+      labels = c("Female", "Male")))
+
+
+# Taking out the already converted variables
+d_study2_long <- d_study2_long_0 %>% subset(select = -c(Condition, gender))
+```
+
+
+
+### Comp Modelling
+
+
+```{r}
+# Load necessary libraries
+library(compositions)
+library(zCompositions)
+library(lme4)
+library(dplyr)
+library(ggplot2)
+
+# Prepare your data
+df <- d_study2_long %>%
+  mutate(
+    inaction_prop = ina / 100,
+    normative_prop = na / 100,
+    nonnormative_prop = nna / 100,
+    extreme_nonnormative_prop = enna / 100
+  )
+
+# Create a matrix of the compositional data
+comp_matrix <- as.matrix(
+  df[, c('inaction_prop',
+         'normative_prop',
+         'nonnormative_prop',
+         'extreme_nonnormative_prop')]
+)
+
+# Replace zeros using the multiplicative replacement method
+comp_matrix_nozeros <- cmultRepl(
+  comp_matrix, method = "CZM", output = "prop", label = 0
+)
+
+# Use zPatterns to see the pattern of zeros
+zPatterns(comp_matrix, label = 0)
+
+# Create acomp object with labels
+comp_data <- acomp(comp_matrix_nozeros)
+
+# Perform ilr transformation
+ilr_data <- ilr(comp_data)
+
+# Convert ilr_data to a data frame and name the columns
+ilr_df <- as.data.frame(ilr_data)
+colnames(ilr_df) <- c('ilr1', 'ilr2', 'ilr3')
+
+# Combine with your original data
+df_ilr <- cbind(df, ilr_df)
+
+# Exclude rows with NA in 'gender_f' before modeling
+df_ilr <- df_ilr %>%
+  filter(!is.na(gender_f))
+
+# Ensure 'gender_f' is a factor with correct levels
+df_ilr$gender_f <- factor(df_ilr$gender_f, levels = c("Female", "Male"))
+
+# Fit the models without NAs
+model_ilr1 <- lmer(
+  ilr1 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+model_ilr2 <- lmer(
+  ilr2 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+model_ilr3 <- lmer(
+  ilr3 ~ time +
+    excluded + injustice + personal + violence +
+    gender_f + (1 + time | ID),
+  control = lmerControl(optimizer = "Nelder_Mead"),
+  data = df_ilr
+)
+
+# Predict ilr values using fixed effects only
+pred_ilr1 <- predict(model_ilr1, newdata = df_ilr, re.form = NA)
+pred_ilr2 <- predict(model_ilr2, newdata = df_ilr, re.form = NA)
+pred_ilr3 <- predict(model_ilr3, newdata = df_ilr, re.form = NA)
+
+# Back-transform to compositional proportions
+pred_ilr_full <- data.frame(ilr1 = pred_ilr1, ilr2 = pred_ilr2, ilr3 = pred_ilr3)
+pred_comp <- ilrInv(pred_ilr_full)
+
+# Assign unique component names to predicted proportions
+colnames(pred_comp) <- c('pred_inaction_prop', 'pred_normative_prop', 'pred_nonnormative_prop', 'pred_extreme_nonnormative_prop')
+
+# Add predicted proportions to df_ilr
+df_ilr <- cbind(df_ilr, pred_comp)
+
+# Visualize results
+ggplot(df_ilr, aes(x = time, y = pred_inaction_prop, group = ID)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = 1), fun = mean, geom = "line", color = "blue", linewidth = 1.5) +
+  labs(title = "Predicted Inaction Proportion Over Time",
+       x = "Time",
+       y = "Predicted Inaction Proportion")
+
+```
+
+```{r}
+install.packages("MCMCglmm")
+library(MCMCglmm)
+prior <- list(R = list(V = diag(3), nu = 0.002),
+              G = list(G1 = list(V = diag(3), nu = 0.002)))
+mcmc_model <- MCMCglmm(cbind(ilr1, ilr2, ilr3) ~ trait:(time + excluded + injustice + personal + violence + gender_f) - 1,
+                       random = ~ us(trait):ID,
+                       rcov = ~ us(trait):units,
+                       family = rep("gaussian", 3),
+                       data = df_ilr,
+                       prior = prior,
+                       verbose = FALSE)
+
+summary(mcmc_model)
+```
+
+```{r}
+residuals_df <- data.frame(
+  res_ilr1 = resid(model_ilr1),
+  res_ilr2 = resid(model_ilr2),
+  res_ilr3 = resid(model_ilr3)
+)
+cor(residuals_df)
+```
+
+
+
+```{r}
+install.packages("brms")
+library(brms)
+formula <- bf(ilr1 ~ time + excluded + injustice + personal + violence + gender_f + (1 + time | ID)) +
+           bf(ilr2 ~ time + excluded + injustice + personal + violence + gender_f + (1 + time | ID)) +
+           bf(ilr3 ~ time + excluded + injustice + personal + violence + gender_f + (1 + time | ID))
+brms_model <- brm(formula, data = df_ilr, chains = 4, cores = 4)
+
+```
+
+
+```{r}
+fixed_effects <- summary(mcmc_model)$solutions
+
+newdata <- df_ilr
+
+# Create design matrix for fixed effects
+# Extract the fixed effects coefficients
+beta <- fixed_effects[, "post.mean"]
+names(beta) <- rownames(fixed_effects)
+
+# For each trait (ilr coordinate), compute the linear predictor
+# Prepare the design matrix for each trait
+predictors <- c("time", "excluded", "injustice", "personal", "violence", "gender_f")
+
+# Initialize a data frame to store predicted ilr coordinates
+predicted_ilr <- data.frame(ID = newdata$ID, time = newdata$time)
+
+for (trait in c("ilr1", "ilr2", "ilr3")) {
+  # Construct the variable names in beta
+  beta_names <- paste0("trait", trait, ":", predictors)
+  # Subset beta coefficients for the trait
+  beta_trait <- beta[beta_names]
+  # Ensure the order matches the predictors
+  beta_trait <- beta_trait[beta_names]
+
+  # Create the design matrix for the predictors
+  X <- model.matrix(~ time + excluded + injustice + personal + violence + gender_f, data = newdata)
+  # Remove the intercept (since we used '-1' in the model formula)
+  X <- X[, -1]
+
+  # Compute the linear predictor for the trait
+  eta <- as.vector(X %*% beta_trait)
+
+  # Store the predicted ilr values
+  predicted_ilr[[trait]] <- eta
+}
+
+```
+
+
+```{r}
+library(compositions)
+
+# Convert predicted ilr coordinates to a matrix
+ilr_pred_matrix <- as.matrix(predicted_ilr[, c("ilr1", "ilr2", "ilr3")])
+
+# Back-transform to compositions
+pred_comp <- ilrInv(ilr_pred_matrix)
+
+# Assign component names
+colnames(pred_comp) <- c("ina", "na", "nna", "enna")
+
+# Combine with the predicted ilr and predictors
+pred_results <- cbind(predicted_ilr, pred_comp)
+
+```
+
+```{r}
+library(tidyr)
+
+# Reshape compositions to long format
+pred_long <- pred_results %>%
+  select(ID, time, ina, na, nna, enna) %>%
+  pivot_longer(
+    cols = c("Inaction", "Normative", "Nonnormative", "Extreme.Nonnormative"),
+    names_to = "Action",
+    values_to = "Proportion"
+  )
+
+```
+
+
+
+# Modeling try 2
+
+
+
+
+
+
+
+
+
