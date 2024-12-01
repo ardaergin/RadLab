@@ -19,315 +19,260 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(stats)
-```
-
-# Compositional
-```{r}
-load("../data/data_working/d_combined.Rdata")
+library(lme4)
 library(compositions)
 library(zCompositions)
-
-df_ilr <- RadLab::prepare_compositional_data(data_combined)
-
-df_ilr_export <- df_ilr %>% dplyr::select(
-  time, 
-  ID, 
-  Experiment, 
-  excluded, injustice, personal, violence,
-  ilr1, ilr2, ilr3)
-
-write.csv(df_ilr_export, 
-          file = "../data/data_working/ilr_transformed_full_data.csv", 
-          row.names = FALSE)
 ```
 
 
 
-# Modelling
-
-## Linear mixed effect
 ```{r}
-library(lme4)
+load("../data/data_working/d_study1.Rdata")
+load("../data/data_working/d_study2.Rdata")
+load("../data/data_working/d_study3.Rdata")
+load("../data/data_working/d_study4.Rdata")
+load("../data/data_working/d_study5.Rdata")
+load("../data/data_working/d_study6.Rdata")
+load("../data/data_working/d_study7.Rdata")
+load("../data/data_working/d_study8.Rdata")
+```
 
-# Model for ilr1
-ilr1_model <- lmer(
-  ilr1 ~ time + excluded + injustice + personal + violence + 
-         (1 | ID) +  # Random slope and intercept for participant
-         (1 | Experiment),   # Random intercept for each experiment
-  data = df_ilr
+```{r}
+# For d_study1
+data <- d_study1
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_1 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
 )
-save(ilr1_model, file = "../data/models/ilr1_model.Rdata")
-summary(ilr1_model)
+summary(ilr1_model_1)
 
-# Model for ilr2
-ilr2_model <- lmer(
-  ilr2 ~ time + excluded + injustice + personal + violence + 
-         (1 | ID) +  # Random slope and intercept for participant
-         (1 | Experiment),   # Random intercept for each experiment
-  data = df_ilr
+ilr2_model_1 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
 )
-save(ilr2_model, file = "../data/models/ilr2_model.Rdata")
-summary(ilr2_model)
+summary(ilr2_model_1)
 
-# Model for ilr3
-ilr3_model <- lmer(
-  ilr3 ~ time + excluded + injustice + personal + violence + 
-         (1 | ID) +  # Random slope and intercept for participant
-         (1 | Experiment),   # Random intercept for each experiment
-  data = df_ilr
+ilr3_model_1 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
 )
-save(ilr3_model, file = "../data/models/ilr3_model.Rdata")
-summary(ilr3_model)
+summary(ilr3_model_1)
 
+# For d_study2
+data <- d_study2
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_2 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_2)
+
+ilr2_model_2 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_2)
+
+ilr3_model_2 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_2)
+
+# For d_study3
+data <- d_study3
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_3 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_3)
+
+ilr2_model_3 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_3)
+
+ilr3_model_3 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_3)
+
+# For d_study4
+data <- d_study4
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_4 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_4)
+
+ilr2_model_4 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_4)
+
+ilr3_model_4 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_4)
+
+# For d_study5
+data <- d_study5
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_5 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_5)
+
+ilr2_model_5 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_5)
+
+ilr3_model_5 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_5)
+
+# For d_study6
+data <- d_study6
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_6 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_6)
+
+ilr2_model_6 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_6)
+
+ilr3_model_6 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_6)
+
+# For d_study7
+data <- d_study7
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_7 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_7)
+
+ilr2_model_7 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_7)
+
+ilr3_model_7 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_7)
+
+# For d_study8
+data <- d_study8
+ilr_data <- RadLab::prepare_compositional_data(data)
+
+ilr1_model_8 <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model_8)
+
+ilr2_model_8 <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model_8)
+
+ilr3_model_8 <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = ilr_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model_8)
 ```
 
 
-## MCMCglmm
 ```{r}
+load('../models/mcmc_results.Rdata')
+
+summary(mcmc_model)
+
 library(MCMCglmm)
-```
-
-```{r}
-# Priors
-prior <- list(
-  R = list(V = diag(3), nu = 0.002),  # rcov prior
-  G = list(
-    G1 = list(V = diag(3), nu = 10),      # prior for ID
-    G2 = list(V = diag(3), nu = 10),      # prior for ID:time
-    G3 = list(V = diag(3), nu = 10)       # prior for Experiment
-  )
-)
-
-# Model
-mcmc_model <- MCMCglmm::MCMCglmm(
-  cbind(ilr1, ilr2, ilr3) ~ trait:(time + excluded + injustice + personal + violence) - 1,
-  random = ~ us(trait):ID + idh(trait):ID:time + us(trait):Experiment,
-  rcov = ~ us(trait):units,
-  family = rep("gaussian", 3),
-  data = df_ilr,
-  prior = prior,
-  verbose = FALSE
-)
-
-save(mcmc_model, file = "../data/models/mcmc_results.Rdata")
 
 summary(mcmc_model)
 ```
 
-```{r}
-# Extract fixed effects estimates
-fixed_effects <- mcmc_model$Sol[, grep("trait", colnames(mcmc_model$Sol))]
 
-# Calculate posterior means
-mean_effects <- apply(fixed_effects, 2, mean)
-
-# Create a matrix for ilr coordinates
-ilr_pred <- matrix(mean_effects, ncol = 2)
-
-# Back-transform to compositions
-comp_pred <- compositions::ilrInv(ilr_pred, orig = comp_data)
-
-# Convert to data frame and name columns
-comp_pred_df <- as.data.frame(comp_pred)
-colnames(comp_pred_df) <- c('normative_prop', 'nonnormative_prop', 'extreme_nonnormative_prop')
-
-# Now you can interpret or plot comp_pred_df
-
-```
-
-
-## brms
-```{r}
-install.packages("brms")
-library(brms)
-```
-
-```{r}
-# Generate lagged ilr variables
-data <- data %>%
-  group_by(ID) %>%
-  arrange(time) %>%
-  mutate(
-    ilr1_lag1 = lag(ilr1, 1),
-    ilr2_lag1 = lag(ilr2, 1),
-    ilr3_lag1 = lag(ilr3, 1)
-  ) %>%
-  ungroup()
-```
-
-```{r}
-# Define the model
-dsem_model <- bf(ilr1 ~ time + ilr1_lag1 + 
-                   excluded + injustice + personal + violence + 
-                   (1 | Experiment) + (1 + time | ID)) +
-              bf(ilr2 ~ time + ilr2_lag1 + 
-                   excluded + injustice + personal + violence + 
-                   (1 | Experiment) + (1 + time | ID)) +
-              bf(ilr3 ~ time + ilr3_lag1 + 
-                   excluded + injustice + personal + violence + 
-                   (1 | Experiment) + (1 + time | ID))
-
-# Fit the model
-fit <- brm(
-  dsem_model, 
-  data = data, 
-  chains = 4, 
-  cores = 4, 
-  iter = 2000, 
-  control = list(adapt_delta = 0.95))
-```
-
-```{r}
-summary(fit)
-```
-
-
-```{r}
-# Define the model formula with a hierarchical structure
-# Main effects for time and control variables, random effects for ID and Experiment
-formula <- bf(
-  cbind(ilr1, ilr2, ilr3) ~ time + excluded + injustice + personal + violence + 
-    (1 + time | ID) +  # Random intercept and slope for each ID
-    (1 | Experiment)    # Random intercept for each experiment
-)
-
-# Define priors
-priors <- c(
-  set_prior("normal(0, 1)", class = "b"),          # Prior for fixed effects
-  set_prior("student_t(3, 0, 2.5)", class = "sd"), # Prior for random effect sd
-  set_prior("lkj(2)", class = "cor")               # Prior for correlation matrix
-)
-
-# Fit the model
-mcmc_model <- brm(
-  formula = formula,
-  data = df_ilr,
-  family = gaussian(),    # Gaussian family for continuous outcomes
-  prior = priors,
-  chains = 4,             # Number of Markov chains
-  iter = 2000,            # Number of iterations per chain
-  control = list(adapt_delta = 0.95), # Control parameters to help with convergence
-  cores = parallel::detectCores()     # Use all available cores
-)
-
-# Print a summary of the model
-summary(mcmc_model)
-```
-
-
-
-## DSEM with blavaan
-```{r}
-library(blavaan)
-```
-
-```{r}
-# Define the model with random intercepts for Experiment and random slopes for time by ID
-model <- '
-  # Latent variable representing radicalization
-  radicalization =~ ilr1 + ilr2 + ilr3
-  
-  # Dynamic time-lagged effect
-  radicalization ~ lag(radicalization, -1)
-  
-  # Control variables as predictors
-  radicalization ~ excluded + injustice + personal + violence
-  
-  # Random intercept for Experiment
-  radicalization ~ Experiment
-  
-  # Random slope for time within each participant (ID)
-  radicalization ~ time | ID
-'
-# Fit the model
-fit <- blavaan::blavaan(model, data = data_combined, auto.fix.first = TRUE)
-summary(fit)
-```
-
-```{r}
-data_combined <- data_combined[order(data_combined$ID, data_combined$time), ]
-
-library(tsibble)
-
-# Convert data to a tsibble, indexing by `time` for each `ID`
-data_ts <- df_ilr %>%
-  as_tsibble(index = time, key = ID)
-
-# Create lagged variables using tsibble
-data_ts <- data_ts %>%
-  dplyr::mutate(
-    ilr1_lag1 = dplyr::lag(ilr1, n = 1, order_by = time),
-    ilr2_lag1 = dplyr::lag(ilr2, n = 1, order_by = time),
-    ilr3_lag1 = dplyr::lag(ilr3, n = 1, order_by = time)
-  )
-
-
-library(dsem)
-
-# Specify the DSEM model syntax
-sem_model <- "
-   # Define the latent variable with lagged autoregression
-   radicalization =~ ilr1 + ilr2 + ilr3
-   radicalization ~ lag(radicalization, 1)
-
-   # Include control variables as predictors
-   radicalization ~ excluded + injustice + personal + violence
-
-   # Random intercept for Experiment
-   radicalization ~ Experiment
-
-   # Random slope for time within each participant (ID)
-   radicalization ~ (1 + time | ID)
-"
-
-# Fit the model
-fit <- dsem::dsem(
-    sem = sem_model,
-    tsdata = data_ts,  # Ensure your data is structured as a time series object
-    estimate_delta0 = TRUE,
-    control = dsem_control(quiet = FALSE)
-)
-
-summary(fit)
-```
-
-
-
-```{r}
-model <- lm(cbind(ilr1, ilr2, ilr3) ~ time + excluded + injustice + personal + violence + condition_f, data = df_ilr)
-summary(model)
-
-library(lme4)
-model <- lmer(cbind(ilr1, ilr2, ilr3) ~ time + 
-                excluded + injustice + personal + violence + 
-                condition_f + 
-                (1 | ID), data = df_ilr)
-summary(model)
-
-model_manova <- manova(cbind(ilr1, ilr2, ilr3) ~ time + 
-                         excluded + injustice + personal + violence + 
-                         condition_f, data = df_ilr)
-summary(model_manova)
-
-library(brms)
-model_brms <- brm(
-  bf(ilr1 ~ time + excluded + injustice + personal + violence + condition_f + (1 | ID)) +
-  bf(ilr2 ~ time + excluded + injustice + personal + violence + condition_f + (1 | ID)) +
-  bf(ilr3 ~ time + excluded + injustice + personal + violence + condition_f + (1 | ID)),
-  data = df_ilr,
-  chains = 4, cores = 4
-)
-```
-
-```{r}
-# Extract residuals
-residuals <- residuals(model)
-
-# Q-Q plot for normality
-qqnorm(residuals)
-qqline(residuals, col = "red")
-
-# Shapiro-Wilk test for normality
-shapiro.test(residuals)
-```
 
