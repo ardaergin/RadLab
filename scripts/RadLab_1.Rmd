@@ -15,7 +15,7 @@ The code below loads the RadLab package, you need to download the "devtools" pac
 # First install the package with: 
 
 # devtools::install_github("ardaergin/RadLab")
-library(RadLab)
+devtools::load_all(".") # or `library(RadLab)`
 library(haven)
 library(dplyr)
 library(stats)
@@ -39,7 +39,7 @@ This is the data of 36 participants rating the vignettes on four dimensions.
 ## Import
 ```{r}
 d_pilot_0 <- haven::read_sav(
-  "data/0_pilot.sav")
+  "../data/data/0_pilot.sav")
 ```
 
 
@@ -201,7 +201,7 @@ o_study8 <- RadLab::merge_with_pilot(
 ```{r Study 1 - Import}
 # Importing data:
 d_study1_0 <- haven::read_spss(
-  'data/1_hartog.sav')
+  '../data/data/1_hartog.sav')
 ```
 
 
@@ -315,7 +315,7 @@ d_study1 <- d_study1_long %>% subset(select = -c(
   pol_left_right, 
   pol_liberal_conserv))
 
-save(d_study1, file = "data_working/d_study1.Rdata")
+save(d_study1, file = "../data/data_working/d_study1.Rdata")
 ```
 
 
@@ -331,7 +331,7 @@ save(d_study1, file = "data_working/d_study1.Rdata")
 ## Import
 ```{r Study 2 - Import}
 d_study2_0 <- haven::read_spss(
-  'data/2_meike.sav')
+  '../data/data/2_meike.sav')
 ```
 
 
@@ -453,7 +453,7 @@ d_study2 <- d_study2_long %>% subset(select = -c(
   liberal_conservative_rec, 
   left_right_rec))
 
-save(d_study2, file = "data_working/d_study2.Rdata")
+save(d_study2, file = "../data/data_working/d_study2.Rdata")
 ```
 
 
@@ -470,7 +470,7 @@ save(d_study2, file = "data_working/d_study2.Rdata")
 ```{r Study3 - Import}
 # Importing data:
 d_study3_0 <- haven::read_spss(
-  'data/3_julius.sav')
+  '../data/data/3_julius.sav')
 ```
 
 
@@ -631,7 +631,7 @@ d_study3 <- d_study3_long %>% subset(select = -c(
   Pol1_2, 
   Pol2_2))
 
-save(d_study3, file = "data_working/d_study3.Rdata")
+save(d_study3, file = "../data/data_working/d_study3.Rdata")
 ```
 
 
@@ -649,7 +649,7 @@ save(d_study3, file = "data_working/d_study3.Rdata")
 ```{r Study 4 - Import}
 # Importing data:
 d_study4_0 <- haven::read_spss(
-  'data/4_barbara.sav')
+  '../data/data/4_barbara.sav')
 ```
 
 
@@ -888,7 +888,7 @@ d_study4_long <- d_study4_long_0 %>% subset(select = -c(Cond, GenderR, Age))
 d_study4 <- d_study4_long %>% subset(select = -c(
   PolOri))
 
-save(d_study4, file = "data_working/d_study4.Rdata")
+save(d_study4, file = "../data/data_working/d_study4.Rdata")
 ```
 
 
@@ -905,7 +905,7 @@ save(d_study4, file = "data_working/d_study4.Rdata")
 ## Import
 ```{r Study 5 - Import}
 d_study5_0 <- haven::read_spss(
-  'data/5_brouwer_et_al.sav')
+  '../data/data/5_brouwer_et_al.sav')
 ```
 
 
@@ -1121,7 +1121,7 @@ d_study5_long <- d_study5_long_0 %>% subset(select = -c(Conditie, Gender, Age))
 ## Save
 ```{r}
 d_study5 <- d_study5_long
-save(d_study5, file = "data_working/d_study5.Rdata")
+save(d_study5, file = "../data/data_working/d_study5.Rdata")
 ```
 
 
@@ -1137,7 +1137,7 @@ save(d_study5, file = "data_working/d_study5.Rdata")
 ```{r Study 6 - Import}
 # Importing data:
 d_study6_0 <- haven::read_spss(
-  'data/6_cham_et_al.sav')
+  '../data/data/6_cham_et_al.sav')
 ```
 
 
@@ -1272,7 +1272,7 @@ d_study6_long <- d_study6_long_0 %>% subset(select = -c(Gender, Age))
 ## Save
 ```{r}
 d_study6 <- d_study6_long
-save(d_study6, file = "data_working/d_study6.Rdata")
+save(d_study6, file = "../data/data_working/d_study6.Rdata")
 ```
 
 
@@ -1286,7 +1286,7 @@ save(d_study6, file = "data_working/d_study6.Rdata")
 ```{r Study 7 - Import}
 # Importing data:
 d_study7_0 <- haven::read_spss(
-  'data_cleaned_allard/22-23_Radlab_Jordan.sav')
+  '../data/data_cleaned_allard/22-23_Radlab_Jordan.sav')
 ```
 
 
@@ -1406,7 +1406,7 @@ d_study7_long_0 <- d_study7 %>% wide_to_long(
 
 
 # Condition
-## I skipped this
+d_study7_long_0$condition_f <- as.factor(0)
 
 
 # Gender
@@ -1430,7 +1430,7 @@ d_study7_long <- d_study7_long_0 %>% subset(select = -c(Gender, Age))
 ## Save
 ```{r}
 d_study7 <- d_study7_long
-save(d_study7, file = "data_working/d_study7.Rdata")
+save(d_study7, file = "../data/data_working/d_study7.Rdata")
 ```
 
 
@@ -1443,7 +1443,7 @@ save(d_study7, file = "data_working/d_study7.Rdata")
 ```{r Study 8 - Import}
 # Importing data:
 d_study8_0 <- haven::read_spss(
-  'data_cleaned_allard/23-24_Radlab_DeRee.sav')
+  '../data/data_cleaned_allard/23-24_Radlab_DeRee.sav')
 ```
 
 
@@ -1561,7 +1561,7 @@ d_study8_long_0 <- d_study8 %>% wide_to_long(
 
 
 # Condition
-## I skipped this
+d_study8_long_0$condition_f <- as.factor(0)
 
 
 # Gender
@@ -1584,7 +1584,7 @@ d_study8_long <- d_study8_long_0 %>% subset(select = -c(gen))
 ## Save
 ```{r}
 d_study8 <- d_study8_long
-save(d_study8, file = "data_working/d_study8.Rdata")
+save(d_study8, file = "../data/data_working/d_study8.Rdata")
 ```
 
 
