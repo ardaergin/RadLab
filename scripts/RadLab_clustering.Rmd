@@ -1,6 +1,6 @@
 ---
 title: "Radicalization Lab"
-subtitle: "Code sheet 1: Data preparation"
+subtitle: "Code sheet 4: Data preparation"
 author: "Arda Ergin"
 output:
   rmdformats::downcute:
