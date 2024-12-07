@@ -36,6 +36,10 @@ load("../data/data_working/d_study7.Rdata")
 load("../data/data_working/d_study8.Rdata")
 ```
 
+```{r}
+unique(d_study1$time)
+```
+
 
 ```{r}
 # List of datasets and their names
@@ -79,6 +83,7 @@ for (name in names(datasets)) {
   ilr_transformed_dataset <- ilr_transformed_dataset %>%
     dplyr::select(
       time, ID, 
+      ina, na, nna, enna,
       ilr1, ilr2, ilr3, 
       excluded, injustice, personal, violence,
       Vignette,
@@ -108,147 +113,6 @@ for (name in names(datasets)) {
   write.csv(wide_data, file_name_csv_wide, row.names = FALSE)
   save(wide_data, file = file_name_rdata_wide)
 }
-```
-
-
-
-```{r}
-
-# List of datasets and their names
-datasets <- list(
-  d_study1 = d_study1, 
-  d_study2 = d_study2, 
-  d_study3 = d_study3, 
-  d_study4 = d_study4, 
-  d_study5 = d_study5, 
-  d_study6 = d_study6, 
-  d_study7 = d_study7, 
-  d_study8 = d_study8
-)
-
-# Loop through each dataset
-for (name in names(datasets)) {
-  dataset <- datasets[[name]]  # Access the dataset by name
-  
-  # Transform dataset
-  ilr_transformed_dataset <- RadLab::prepare_compositional_data(dataset)
-  
-  # Select columns
-  ilr_transformed_dataset <- ilr_transformed_dataset %>%
-  dplyr::select(
-    time, ID, 
-    ilr1, ilr2, ilr3, 
-    excluded, injustice, personal, violence,
-    Vignette,
-    gender_f, age,
-    condition_f
-  )
-  
-  # Wide
-  wide_data <- ilr_transformed_dataset %>%
-  pivot_wider(
-    names_from = time,
-    values_from = c(ilr1, ilr2, ilr3, excluded, injustice, personal, violence, Vignette)
-  )
-  
-  # Long
-  file_name_csv <- paste0("../data/data_ilr_transformed/", name, "_long", ".csv")
-  file_name_rdata <- paste0("../data/data_ilr_transformed/", name, "_long", ".Rdata")
-  
-  # Wide
-  file_name_csv <- paste0("../data/data_ilr_transformed/", name, "_wide", ".csv")
-  file_name_rdata <- paste0("../data/data_ilr_transformed/", name, "_wide", ".Rdata")
-  
-  # Write transformed data to a CSV file
-  write.csv(ilr_transformed_dataset, file_name_csv, row.names = FALSE)
-  
-  # Save as an RData file
-  save(ilr_transformed_dataset, file = file_name_rdata)
-}
-```
-
-```{r}
-ilr_transformed_dataset
-
-wide_data <- ilr_transformed_dataset %>%
-  group_by(ID) %>%
-  mutate(
-    age = first(age),  # Keeps the first (or any) value for age
-    gender_f = first(gender_f),
-    Vignette = first(Vignette)
-  ) %>%
-  ungroup() %>%
-  pivot_wider(
-    id_cols = ID,
-    names_from = time, 
-    values_from = c(ilr1, ilr2, ilr3, 
-                    excluded, injustice, personal, violence),
-    names_glue = "{.value}_t{time}"
-  )
-
-
-
-colnames(wide_data)
-```
-
-```{r}
-
-library(dplyr)
-library(tidyr)
-
-# Function to calculate regression slope
-calculate_slope <- function(x, y) {
-  if (length(unique(x)) < 2) return(NA) # Avoid issues with insufficient data
-  lm_model <- lm(y ~ x)
-  coef(lm_model)["x"]
-}
-
-# Main function to process the dataset
-process_dataset <- function(data, id_col = "ID") {
-  # Identify `ilr` columns and corresponding time points dynamically
-  ilr_columns <- grep("^ilr\\d+_", names(data), value = TRUE)
-  time_points <- as.numeric(sub(".*_", "", ilr_columns))
-  
-  # Reshape the data to long format for processing
-  long_data <- data %>%
-    pivot_longer(cols = all_of(ilr_columns), 
-                 names_to = c("ilr_var", "time_point"), 
-                 names_sep = "_", 
-                 values_to = "value") %>%
-    mutate(time_point = as.numeric(time_point))
-  
-  # Calculate percentiles for each individual
-  long_data <- long_data %>%
-    group_by(!!sym(id_col)) %>%
-    mutate(percentile = ntile(time_point, 3)) %>%
-    ungroup()
-  
-  # Calculate slopes for each variable and interval
-  features <- long_data %>%
-    group_by(!!sym(id_col), ilr_var, percentile) %>%
-    summarise(
-      slope = calculate_slope(time_point, value),
-      .groups = "drop"
-    ) %>%
-    pivot_wider(
-      names_from = c(ilr_var, percentile), 
-      values_from = slope, 
-      names_prefix = "slope_"
-    )
-  
-  # Merge features back to the original dataset
-  data %>%
-    left_join(features, by = id_col)
-}
-
-# Example usage
-
-# Process the dataset
-processed_data <- process_dataset(wide_data)
-
-# View the processed dataset with new features
-colnames(processed_data)
-
 ```
 
 

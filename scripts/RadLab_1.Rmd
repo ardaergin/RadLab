@@ -102,10 +102,10 @@ colnames(v.means_pilot) <- c(
   'injustice', 
   'personal', 
   'violence', 
-  'order')
+  'vignette_id')
 
 # Giving the order
-v.means_pilot['order'] <- 1:21
+v.means_pilot['vignette_id'] <- 1:21
 
 # Loop to assign means:
 for (i in 1:4) {
@@ -120,71 +120,50 @@ This is the hand-filled excel file. It includes the order of the vignettes in ea
 ```{r}
 # Importing the Excel File
 studies_all <- readxl::read_excel('RadLab - All Experiments.xlsx')
-studies_all_relevant <- studies_all[1:15,]
-
-# Only selecting the relevant vignettes from the pilot
-# The following was NEVER used in any study at all
-values_to_remove <- c(4, 8, 12, 17, 20, 21)
-v.means_pilot <- v.means_pilot %>% filter(!order %in% values_to_remove)
+studies_all <- studies_all[1:15,] # Only selecting the actually used vignettes
 
 # Min-max normalisation for the control variables: 
+v.means_pilot <- v.means_pilot %>%
+  filter(vignette_id %in% studies_all$Pilot)
+
 v.means_pilot_normalised <- v.means_pilot %>%
   mutate(across(c(excluded, injustice, personal, violence), 
                 ~ (. - min(.)) / (max(.) - min(.))))
 
 v.means_pilot <- v.means_pilot_normalised
 
-########## Order: Pilot ##########
-o_pilot <- studies_all_relevant[
-  !is.na(studies_all_relevant[,2]), c(1,2)]
-
-########## Order: Study1 ##########
-o_study1 <- RadLab::merge_with_pilot(
+########## Vignette Names and Their ID ##########
+vignettes_full <- base::merge(
+  v.means_pilot, 
   studies_all,
-  v.means_pilot,
-  1)
+  by.x = "vignette_id",
+  by.y = "Pilot")
 
-########## Order: Study2 ##########
-o_study2 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  2)
-
-########## Order: Study3 ##########
-o_study3 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  3)
-
-########## Order: Study4 ##########
-o_study4 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  4)
-
-########## Order: Study5 ##########
-o_study5 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  5)
-
-########## Order: Study6 ##########
-o_study6 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  6)
-
-########## Order: Study7 ##########
-o_study7 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  7)
-
-########## Order: Study8 ##########
-o_study8 <- RadLab::merge_with_pilot(
-  studies_all,
-  v.means_pilot,
-  8)
+########## Order: Studies ##########
+o_study1 <- vignettes_full[!is.na(vignettes_full[7]), c(2:6, 7)]
+o_study1 <- o_study1[order(o_study1[[6]]), ]
+colnames(o_study1)[6] <- "order"
+o_study2 <- vignettes_full[!is.na(vignettes_full[8]), c(2:6, 8)]
+o_study2 <- o_study2[order(o_study2[[6]]), ]
+colnames(o_study2)[6] <- "order"
+o_study3 <- vignettes_full[!is.na(vignettes_full[9]), c(2:6, 9)]
+o_study3 <- o_study3[order(o_study3[[6]]), ]
+colnames(o_study3)[6] <- "order"
+o_study4 <- vignettes_full[!is.na(vignettes_full[10]), c(2:6, 10)]
+o_study4 <- o_study4[order(o_study4[[6]]), ]
+colnames(o_study4)[6] <- "order"
+o_study5 <- vignettes_full[!is.na(vignettes_full[11]), c(2:6, 11)]
+o_study5 <- o_study5[order(o_study5[[6]]), ]
+colnames(o_study5)[6] <- "order"
+o_study6 <- vignettes_full[!is.na(vignettes_full[12]), c(2:6, 12)]
+o_study6 <- o_study6[order(o_study6[[6]]), ]
+colnames(o_study6)[6] <- "order"
+o_study7 <- vignettes_full[!is.na(vignettes_full[13]), c(2:6, 13)]
+o_study7 <- o_study7[order(o_study7[[6]]), ]
+colnames(o_study7)[6] <- "order"
+o_study8 <- vignettes_full[!is.na(vignettes_full[14]), c(2:6, 14)]
+o_study8 <- o_study8[order(o_study8[[6]]), ]
+colnames(o_study8)[6] <- "order"
 ```
 
 
@@ -264,10 +243,9 @@ d_study1 <- RadLab::convert_df(d_study1_3)
 
 ## Means plot
 ```{r Study 1 - Means Plot}
-study_1_means_plot <- d_study1[,1:60] %>%
-  RadLab::graph_means(
-    name_data = o_study1,
-    n_vignettes = 15)
+d_study1[,1:60] %>% RadLab::graph_means(
+  name_data = o_study1,
+  n_vignettes = 15)
 ```
 
 
@@ -1586,26 +1564,5 @@ d_study8_long <- d_study8_long_0 %>% subset(select = -c(gen))
 d_study8 <- d_study8_long
 save(d_study8, file = "../data/data_working/d_study8.Rdata")
 ```
-
-
-
-# -------------
-
-# Combining all data
-```{r}
-data_combined <- dplyr::bind_rows(
-  d_study1,
-  d_study2,
-  d_study3,
-  d_study4,
-  d_study5,
-  d_study6,
-  d_study7,
-  d_study8
-)
-
-save(data_combined, file = "data_working/d_combined.Rdata")
-```
-
 
 
