@@ -20,6 +20,7 @@ library(tidyr)
 library(ggplot2)
 library(stats)
 library(lme4)
+library(lmerTest)
 library(compositions)
 library(zCompositions)
 ```
@@ -36,10 +37,6 @@ load("../data/data_working/d_study7.Rdata")
 load("../data/data_working/d_study8.Rdata")
 ```
 
-```{r}
-unique(d_study1$time)
-```
-
 
 ```{r}
 # List of datasets and their names
@@ -53,6 +50,7 @@ datasets <- list(
   d_study7 = d_study7, 
   d_study8 = d_study8
 )
+datasets_transformed <- list()
 
 # Initialize a counter for unique condition numbers
 condition_counter <- 0
@@ -91,6 +89,7 @@ for (name in names(datasets)) {
       condition,
       Experiment
     )
+  datasets_transformed <- append(datasets_transformed, list(ilr_transformed_dataset))
 
   # Wide transformation
   wide_data <- ilr_transformed_dataset %>%
@@ -114,6 +113,78 @@ for (name in names(datasets)) {
   save(wide_data, file = file_name_rdata_wide)
 }
 ```
+
+```{r}
+df <- rbind(datasets_transformed[[1]], datasets_transformed[[2]], 
+            datasets_transformed[[3]], datasets_transformed[[4]],
+            datasets_transformed[[5]], datasets_transformed[[6]], 
+            datasets_transformed[[7]], datasets_transformed[[8]])
+```
+
+With time:
+```{r}
+ilr1_model <- lmerTest::lmer(
+  ilr1 ~ excluded*time + injustice*time + personal*time + violence*time +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr1_residual <- resid(ilr1_model)
+
+ilr2_model <- lmerTest::lmer(
+  ilr2 ~ excluded*time + injustice*time + personal*time + violence*time +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr2_residual <- resid(ilr2_model)
+
+ilr3_model <- lmerTest::lmer(
+  ilr3 ~ excluded*time + injustice*time + personal*time + violence*time +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr3_residual <- resid(ilr3_model)
+```
+
+```{r}
+write.csv(df, "../data/data_ilr_transformed/combined_data__resid_with_time.csv", row.names = FALSE)
+```
+
+Without time
+```{r}
+ilr1_model <- lmerTest::lmer(
+  ilr1 ~ excluded + injustice + personal + violence +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr1_residual <- resid(ilr1_model)
+
+ilr2_model <- lmerTest::lmer(
+  ilr2 ~ excluded + injustice + personal + violence +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr2_residual <- resid(ilr2_model)
+
+ilr3_model <- lmerTest::lmer(
+  ilr3 ~ excluded + injustice + personal + violence +
+    (1 | Experiment/condition),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+df$ilr3_residual <- resid(ilr3_model)
+```
+
+```{r}
+write.csv(df, "../data/data_ilr_transformed/combined_data__resid_without_time.csv", row.names = FALSE)
+```
+
+
+
 
 
 ```{r}

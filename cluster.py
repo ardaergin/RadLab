@@ -2,20 +2,23 @@ import pandas as pd
 import numpy as np
 
 
+
 ##### Setup #####
+df = pd.read_csv("data/data_ilr_transformed/combined_data__resid_with_time.csv")
 # Reading the 8 Experiment CSV files and combine all datasets into one DataFrame:
-path = "data/data_ilr_transformed/"
-file_list = [f"{path}d_study{i}_long.csv" for i in range(1, 9)]
-df = pd.concat([pd.read_csv(file) for file in file_list], ignore_index=True)
+# path = "data/data_ilr_transformed/"
+# file_list = [f"{path}d_study{i}_long.csv" for i in range(1, 9)]
+# df = pd.concat([pd.read_csv(file) for file in file_list], ignore_index=True)
 print(f"Combined dataset shape: {df.shape}")
 print("Unique time points:", df["time"].unique())
 
-# Defining isometric log-ratio transformed dependent variables:
-ilr_columns = ['ilr1', 'ilr2', 'ilr3']
-# Defining control variables:
+# Variables
+original_DVs = ["ina", "na", "nna", "enna"]
 control_columns = ['excluded', 'injustice', 'personal', 'violence']
-# Covariates
-covariate_columns = ['gender', 'age', 'condition']
+covariate_columns = ['gender', 'age']
+ilr_columns = ['ilr1', 'ilr2', 'ilr3']
+ilr_resid_columns = ['ilr1_residual', 'ilr2_residual', 'ilr3_residual']
+
 # Handling NA values in covariates:
 for covariate in covariate_columns: 
     df = df[df[covariate].notna()]
@@ -26,9 +29,10 @@ df[['age']] = RobustScaler().fit_transform(
 )
 
 
+
 ##### Feature Engineering #####
 # Calculate mean and standard deviation per participant (ID) for each ilr column
-for col in ilr_columns:
+for col in ilr_resid_columns:
     df[f'{col}_mean'] = df.groupby('ID')[col].transform('mean')
     df[f'{col}_std'] = df.groupby('ID')[col].transform('std')
     df[f'{col}_min'] = df.groupby('ID')[col].transform('min')
@@ -38,26 +42,25 @@ for col in ilr_columns:
 df['relative_time'] = df.groupby('ID')['time'].transform(lambda x: x / x.max())
 
 # Deviation from group
-for col in ilr_columns:
-    df[f'{col}_deviation'] = df[col] - df.groupby(['Experiment', 'time'])[col].transform('mean')
+# for col in ilr_columns:
+#     df[f'{col}_deviation'] = df[col] - df.groupby(['Experiment', 'time'])[col].transform('mean')
 
 # Interaction Terms: Control Variables with Time
-for col in control_columns:
-    df[f'{col}_time_interaction'] = df[col] * df['time']
+# for col in control_columns:
+#     df[f'{col}_time_interaction'] = df[col] * df['time']
 
 # Residualizing ilr variables
-from statsmodels.regression.mixed_linear_model import MixedLM
+# from statsmodels.regression.mixed_linear_model import MixedLM
 
-for col in ilr_columns:
-    model = MixedLM.from_formula(
-        f"{col} ~ excluded + injustice + personal + violence",
-        groups="Experiment", 
-        # re_formula="1|condition",
-        data=df
-    )
-    result = model.fit()
-    df[f'{col}_residual'] = df[col] - result.fittedvalues
-ilr_resid_columns = ['ilr1_residual', 'ilr2_residual', 'ilr3_residual']
+# for col in ilr_columns:
+#     model = MixedLM.from_formula(
+#         f"{col} ~ excluded + injustice + personal + violence",
+#         groups="Experiment", 
+#         # re_formula="1|condition",
+#         data=df
+#     )
+#     result = model.fit()
+#     df[f'{col}_residual'] = df[col] - result.fittedvalues
 
 # Moving Average or Exponential Moving Average (EMA)
 window_size = 2
@@ -88,19 +91,29 @@ for column_group in [ilr_moving_avg_cols, ilr_ema_cols]:
         # Add Fourier features back to the dataframe
         df = df.join(fourier_df, on='ID')
 
+
 ##### Prepare Time Series Data for Clustering #####
 time_series_data = []
 grouped = df.groupby("ID")
 feature_columns = [
     # 'ilr1', 'ilr2', 'ilr3', 
+
     # 'condition',
-    'gender', 'age',
+    # 'gender', 'age',
     # 'excluded', 'injustice', 'personal', 'violence',
-    'ilr1_mean', 'ilr2_mean', 'ilr3_mean',
-    'ilr1_std', 'ilr2_std', 'ilr3_std',
-    'ilr1_min', 'ilr2_min', 'ilr3_min',
-    'ilr1_max', 'ilr2_max', 'ilr3_max',
-    # 'relative_time',
+
+    # 'ilr1_mean', 'ilr2_mean', 'ilr3_mean',
+    # 'ilr1_std', 'ilr2_std', 'ilr3_std',
+    # 'ilr1_min', 'ilr2_min', 'ilr3_min',
+    # 'ilr1_max', 'ilr2_max', 'ilr3_max',
+
+    'relative_time',
+
+    'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean',
+    'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std',
+    'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min',
+    'ilr1_residual_max', 'ilr2_residual_max', 'ilr3_residual_max',
+
     # 'ilr1_deviation', 'ilr2_deviation', 'ilr3_deviation',
     # 'excluded_time_interaction', 'injustice_time_interaction', 'personal_time_interaction', 'violence_time_interaction',
     # 'ilr1_moving_avg', 'ilr2_moving_avg', 'ilr3_moving_avg', 
@@ -111,12 +124,15 @@ feature_columns = [
     # 'ilr1_moving_avg_fourier_1', 'ilr2_moving_avg_fourier_1', 'ilr3_moving_avg_fourier_1',
     # 'ilr1_moving_avg_fourier_2', 'ilr2_moving_avg_fourier_2', 'ilr3_moving_avg_fourier_2',
     # 'ilr1_residual_fourier_1', 'ilr2_residual_fourier_1', 'ilr3_residual_fourier_1',
+
     # 'ilr1_moving_avg_residual_fourier_1', 'ilr2_moving_avg_residual_fourier_1', 'ilr3_moving_avg_residual_fourier_1',
     # 'ilr1_moving_avg_residual_fourier_2', 'ilr2_moving_avg_residual_fourier_2', 'ilr3_moving_avg_residual_fourier_2'
+
     'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
-    # 'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', # 'ilr3_residual_moving_avg_fourier_2',
-    # 'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', 'ilr3_residual_ema_fourier_1'
-    # 'ilr3_residual_ema_fourier_1', # 'ilr3_residual_ema_fourier_2'
+    'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
+
+    # 'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', 'ilr3_residual_ema_fourier_1',
+    # 'ilr1_residual_ema_fourier_2', 'ilr2_residual_ema_fourier_2', 'ilr3_residual_ema_fourier_2'
 ]
 print(f"{len(feature_columns)} features used:")
 print(feature_columns)
@@ -164,13 +180,10 @@ print(cluster_summary)
 ##### Evaluation (per study!) #####
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 
-# After you run your main clustering and have `df` with `cluster`, `time_series_data`, and `labels`:
 # Assume you have a variable `participant_ids` which stores the participant IDs in the exact order they appear in `time_series_data` and `labels`.
-# If you don't have it yet, you can create it before clustering:
 grouped = df.groupby("ID")
 participant_ids = list(grouped.groups.keys())  # Ensure this matches the order used to build time_series_data
 id_to_index = {pid: i for i, pid in enumerate(participant_ids)}
-
 experiments = df['Experiment'].unique()
 
 for exp in experiments:
@@ -234,7 +247,7 @@ for exp in experiments:
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 
-n_clusters = 4
+n_clusters = 3
 alpha = 0.3  # Smoothing factor for EMA
 savgol_window = 3  # Window length for Savitzky-Golay filter
 savgol_polyorder = 1  # Polynomial order for Savitzky-Golay filter
