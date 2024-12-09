@@ -12,6 +12,7 @@ df = pd.read_csv("data/data_ilr_transformed/combined_data__resid_with_time.csv")
 print(f"Combined dataset shape: {df.shape}")
 print("Unique time points:", df["time"].unique())
 
+
 # Variables
 original_DVs = ["ina", "na", "nna", "enna"]
 control_columns = ['excluded', 'injustice', 'personal', 'violence']
@@ -155,7 +156,6 @@ for participant, group in grouped:
 time_series_data = np.array(time_series_data)
 
 
-
 ##### Clustering #####
 from tslearn.clustering import TimeSeriesKMeans
 
@@ -165,7 +165,7 @@ model = TimeSeriesKMeans(n_clusters=n_clusters, metric="dtw", random_state=0)
 labels = model.fit_predict(time_series_data)
 # Adding labels to the original DataFrame for analysis:
 df["cluster"] = df["ID"].map(dict(zip(grouped.groups.keys(), labels)))
-
+xs
 # Create a summary of the number of participants from each experiment within each cluster
 experiment_cluster_summary = df.groupby(['cluster', 'Experiment']).size().unstack(fill_value=0)
 print(experiment_cluster_summary)
