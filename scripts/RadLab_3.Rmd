@@ -37,9 +37,7 @@ load("../data/data_working/d_study7.Rdata")
 load("../data/data_working/d_study8.Rdata")
 ```
 
-
 ```{r}
-# List of datasets and their names
 datasets <- list(
   d_study1 = d_study1, 
   d_study2 = d_study2, 
@@ -50,6 +48,21 @@ datasets <- list(
   d_study7 = d_study7, 
   d_study8 = d_study8
 )
+```
+
+
+```{r}
+for (name in names(datasets)) {
+  dataset <- datasets[[name]]  
+  cat("Experiment ID:", unique(dataset$Experiment), "—",
+      length(unique(dataset$time)), "scenarios,",
+      length(unique(dataset$ID)), "participants.")
+  cat("\n")
+}
+```
+
+
+```{r}
 datasets_transformed <- list()
 
 # Initialize a counter for unique condition numbers
@@ -119,6 +132,8 @@ df <- rbind(datasets_transformed[[1]], datasets_transformed[[2]],
             datasets_transformed[[3]], datasets_transformed[[4]],
             datasets_transformed[[5]], datasets_transformed[[6]], 
             datasets_transformed[[7]], datasets_transformed[[8]])
+
+write.csv(df, "../data/data_ilr_transformed/combined_data.csv", row.names = FALSE)
 ```
 
 With time:
