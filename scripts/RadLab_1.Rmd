@@ -1190,7 +1190,7 @@ d_study6_4 <- dplyr::left_join(
   by = "ID")
 
 # Assigning experiment number to all participants in this dataset
-d_study6_4$Experiment <- 5
+d_study6_4$Experiment <- 6
 
 # Converting the Columns to Numeric 
 d_study6 <- RadLab::convert_df(d_study6_4)
