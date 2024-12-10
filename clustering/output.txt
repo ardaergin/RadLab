@@ -1,0 +1,60 @@
+Dataset succesfully imported.
+Combined dataset shape: (19265, 21)
+Unique time points: [ 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15]
+====================
+20 features used:
+['relative_time', 'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean', 'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std', 'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min', 'ilr1_residual_max', 'ilr2_residual_max', 'ilr3_residual_max', 'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1', 'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2', 'ilr1_residual_ema_fourier_1']
+====================
+Number of clusters: 3
+====================
+Clustering summaries:
+Experiment    1    2    3     4     5     6     7    8
+cluster                                               
+0           735  525  540  1605   900   352   259  108
+1           975  360  540  2085  1520  1448  1106  588
+2           675  615  600  1905   990   416   322   96
+Experiment     1     2     3     4     5     6     7     8
+cluster                                                   
+0           30.8  35.0  32.1  28.7  26.4  15.9  15.4  13.6
+1           40.9  24.0  32.1  37.3  44.6  65.3  65.6  74.2
+2           28.3  41.0  35.7  34.0  29.0  18.8  19.1  12.1
+cluster
+1    8622
+2    5619
+0    5024
+Name: count, dtype: int64
+               ina         na        nna       enna      ilr1      ilr2  \
+cluster                                                                   
+0        14.057524   6.525677  59.467954  19.948846 -0.364095  2.259046   
+1         3.853282  19.851427  63.947112  12.510554  1.077969  2.361708   
+2         1.566115  37.507208  53.750845   7.175832  2.177917  1.756137   
+
+             ilr3  
+cluster            
+0       -0.102096  
+1       -0.778345  
+2       -1.377384  
+Minimum length in Experiment 1: 15
+Experiment 1: Silhouette Score = 0.432921956961818, Davies-Bouldin Score = 0.6953482956747479
+Minimum length in Experiment 2: 15
+Experiment 2: Silhouette Score = 0.45207907897739397, Davies-Bouldin Score = 0.6401609443302109
+Minimum length in Experiment 3: 15
+Experiment 3: Silhouette Score = 0.444135553945488, Davies-Bouldin Score = 0.6817037289630138
+Minimum length in Experiment 4: 15
+Experiment 4: Silhouette Score = 0.463192740272565, Davies-Bouldin Score = 0.6790938096325343
+Minimum length in Experiment 5: 10
+Experiment 5: Silhouette Score = 0.45594234279776524, Davies-Bouldin Score = 0.6629924471577584
+Minimum length in Experiment 6: 8
+Experiment 6: Silhouette Score = 0.32652204189899325, Davies-Bouldin Score = 0.7084597059100272
+Minimum length in Experiment 7: 7
+Experiment 7: Silhouette Score = 0.3574296867625193, Davies-Bouldin Score = 0.7157951153554806
+Minimum length in Experiment 8: 6
+Experiment 8: Silhouette Score = 0.30785535638220807, Davies-Bouldin Score = 0.7360844054656775
+silhouette_scores
+average: 0.4050098447498439
+max: 0.463192740272565
+min: 0.30785535638220807
+davies_bouldin_scores
+average: 0.6899548065611814
+max: 0.7360844054656775
+min: 0.6401609443302109
