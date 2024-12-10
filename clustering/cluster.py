@@ -1,67 +1,34 @@
 import pandas as pd
 import numpy as np
 
-
+print("=========================")
+print("Running DTW clustering...")
+print("=========================")
 
 ##### Setup #####
-df = pd.read_csv("data/data_ilr_transformed/combined_data__resid_with_time.csv")
-# Reading the 8 Experiment CSV files and combine all datasets into one DataFrame:
-# path = "data/data_ilr_transformed/"
-# file_list = [f"{path}d_study{i}_long.csv" for i in range(1, 9)]
-# df = pd.concat([pd.read_csv(file) for file in file_list], ignore_index=True)
-print(f"Combined dataset shape: {df.shape}")
-print("Unique time points:", df["time"].unique())
-
+df = pd.read_csv("../data/data_ilr_transformed/combined_data__resid_with_time.csv")
+print(f"Dataset succesfully imported. Shape: {df.shape}")
+print(" - Number of experiments:", len(df["Experiment"].unique()))
+print(" - Number of unique time points:", len(df["time"].unique()))
 
 # Variables
 original_DVs = ["ina", "na", "nna", "enna"]
-control_columns = ['excluded', 'injustice', 'personal', 'violence']
-covariate_columns = ['gender', 'age']
 ilr_columns = ['ilr1', 'ilr2', 'ilr3']
 ilr_resid_columns = ['ilr1_residual', 'ilr2_residual', 'ilr3_residual']
-
-# Handling NA values in covariates:
-for covariate in covariate_columns: 
-    df = df[df[covariate].notna()]
-
-from sklearn.preprocessing import RobustScaler
-df[['age']] = RobustScaler().fit_transform(
-    df[['age']]
-)
+control_columns = ['excluded', 'injustice', 'personal', 'violence']
 
 
 
 ##### Feature Engineering #####
+# Additional time-based feature: time point relative to the total duration for each participant
+df['relative_time'] = df.groupby('ID')['time'].transform(lambda x: x / x.max())
+
 # Calculate mean and standard deviation per participant (ID) for each ilr column
 for col in ilr_resid_columns:
     df[f'{col}_mean'] = df.groupby('ID')[col].transform('mean')
     df[f'{col}_std'] = df.groupby('ID')[col].transform('std')
     df[f'{col}_min'] = df.groupby('ID')[col].transform('min')
     df[f'{col}_max'] = df.groupby('ID')[col].transform('max')
-
-# Additional time-based feature: time point relative to the total duration for each participant
-df['relative_time'] = df.groupby('ID')['time'].transform(lambda x: x / x.max())
-
-# Deviation from group
-# for col in ilr_columns:
-#     df[f'{col}_deviation'] = df[col] - df.groupby(['Experiment', 'time'])[col].transform('mean')
-
-# Interaction Terms: Control Variables with Time
-# for col in control_columns:
-#     df[f'{col}_time_interaction'] = df[col] * df['time']
-
-# Residualizing ilr variables
-# from statsmodels.regression.mixed_linear_model import MixedLM
-
-# for col in ilr_columns:
-#     model = MixedLM.from_formula(
-#         f"{col} ~ excluded + injustice + personal + violence",
-#         groups="Experiment", 
-#         # re_formula="1|condition",
-#         data=df
-#     )
-#     result = model.fit()
-#     df[f'{col}_residual'] = df[col] - result.fittedvalues
 
 # Moving Average or Exponential Moving Average (EMA)
 window_size = 2
@@ -93,23 +60,13 @@ for column_group in [ilr_moving_avg_cols, ilr_ema_cols]:
         df = df.join(fourier_df, on='ID')
 
 
+
 ##### Prepare Time Series Data for Clustering #####
 time_series_data = []
 grouped = df.groupby("ID")
+
 feature_columns = [
-    # 'ilr1', 'ilr2', 'ilr3', 
-
-    # 'condition',
-    # 'gender', 'age',
-    # 'excluded', 'injustice', 'personal', 'violence',
-
-    # 'ilr1_mean', 'ilr2_mean', 'ilr3_mean',
-    # 'ilr1_std', 'ilr2_std', 'ilr3_std',
-    # 'ilr1_min', 'ilr2_min', 'ilr3_min',
-    # 'ilr1_max', 'ilr2_max', 'ilr3_max',
-
     'relative_time',
-
     'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean',
     'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std',
     'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min',
@@ -129,14 +86,28 @@ feature_columns = [
     # 'ilr1_moving_avg_residual_fourier_1', 'ilr2_moving_avg_residual_fourier_1', 'ilr3_moving_avg_residual_fourier_1',
     # 'ilr1_moving_avg_residual_fourier_2', 'ilr2_moving_avg_residual_fourier_2', 'ilr3_moving_avg_residual_fourier_2'
 
-    'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
-    'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
+    # 'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
+    # 'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
 
-    # 'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', 'ilr3_residual_ema_fourier_1',
-    # 'ilr1_residual_ema_fourier_2', 'ilr2_residual_ema_fourier_2', 'ilr3_residual_ema_fourier_2'
+    'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', 'ilr3_residual_ema_fourier_1',
+    'ilr1_residual_ema_fourier_2', 'ilr2_residual_ema_fourier_2', 'ilr3_residual_ema_fourier_2'
 ]
+
+print("====================")
 print(f"{len(feature_columns)} features used:")
 print(feature_columns)
+
+
+from sklearn.preprocessing import RobustScaler
+feature_columns_to_scale = [
+    'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean',
+    'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std',
+    'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min',
+    'ilr1_residual_max', 'ilr2_residual_max', 'ilr3_residual_max',
+    'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
+    'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
+]
+# df[feature_columns_to_scale] = RobustScaler().fit_transform(df[feature_columns_to_scale])
 
 # Preprocess the time series data for each participant
 for participant, group in grouped:
@@ -160,12 +131,13 @@ time_series_data = np.array(time_series_data)
 from tslearn.clustering import TimeSeriesKMeans
 
 n_clusters = 3
-print(n_clusters)
+print("====================")
+print("Number of clusters:", n_clusters)
 model = TimeSeriesKMeans(n_clusters=n_clusters, metric="dtw", random_state=0)
 labels = model.fit_predict(time_series_data)
 # Adding labels to the original DataFrame for analysis:
 df["cluster"] = df["ID"].map(dict(zip(grouped.groups.keys(), labels)))
-xs
+
 # Create a summary of the number of participants from each experiment within each cluster
 experiment_cluster_summary = df.groupby(['cluster', 'Experiment']).size().unstack(fill_value=0)
 print(experiment_cluster_summary)
@@ -243,40 +215,92 @@ for exp in experiments:
 
 
 
-##### Plotting #####
-from scipy.signal import savgol_filter
-import matplotlib.pyplot as plt
+# ##### Plotting #####
+# from scipy.signal import savgol_filter
+# import matplotlib.pyplot as plt
 
+# n_clusters = 3
+# alpha = 0.3  # Smoothing factor for EMA
+# savgol_window = 3  # Window length for Savitzky-Golay filter
+# savgol_polyorder = 1  # Polynomial order for Savitzky-Golay filter
+
+# for cluster in range(n_clusters):
+#     cluster_data = df[df['cluster'] == cluster]
+    
+#     # mean_relative = cluster_data.groupby('relative_time')[['ilr1', 'ilr2', 'ilr3']].mean()
+#     mean_relative = cluster_data.groupby('relative_time')[['ina', 'na', 'nna', 'enna']].mean()
+    
+#     # Apply Exponential Moving Average (EMA) smoothing
+#     mean_ilr_smooth_ema = mean_relative.apply(lambda x: x.ewm(alpha=alpha).mean())
+    
+#     # Plot the original and smoothed series for each ILR variable in the cluster
+#     plt.figure(figsize=(12, 6))
+    
+#     # Plot EMA smoothed series3
+#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr1"], label="ILR1 (EMA)", linestyle="--", color="blue")
+#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr2"], label="ILR2 (EMA)", linestyle="--", color="orange")
+#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr3"], label="ILR3 (EMA)", linestyle="--", color="green")
+
+#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["ina"], label="ina (EMA)", linestyle="--", color="blue")
+#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["na"], label="na (EMA)", linestyle="--", color="orange")
+#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["nna"], label="nna (EMA)", linestyle="--", color="green")
+#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["enna"], label="enna (EMA)", linestyle="--", color="red")
+    
+#     # Formatting the plot
+#     plt.xlabel("Relative Time")
+#     plt.ylabel("Action value")
+#     plt.title(f"Cluster {cluster} - Original and Smoothed Time Series")
+#     plt.legend()
+#     plt.show()
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set Seaborn style
+sns.set(style="whitegrid")
+
+# Parameters
 n_clusters = 3
 alpha = 0.3  # Smoothing factor for EMA
 savgol_window = 3  # Window length for Savitzky-Golay filter
 savgol_polyorder = 1  # Polynomial order for Savitzky-Golay filter
 
-for cluster in range(n_clusters):
+# Set up a grid for side-by-side plots
+fig, axes = plt.subplots(1, n_clusters, figsize=(15, 5), sharey=True)
+
+# Define colors for the action options
+colors = {
+    "ina": "blue",
+    "na": "orange",
+    "nna": "green",
+    "enna": "red",
+}
+
+# Loop through clusters
+for cluster, ax in enumerate(axes):
     cluster_data = df[df['cluster'] == cluster]
-    
-    # mean_relative = cluster_data.groupby('relative_time')[['ilr1', 'ilr2', 'ilr3']].mean()
     mean_relative = cluster_data.groupby('relative_time')[['ina', 'na', 'nna', 'enna']].mean()
     
     # Apply Exponential Moving Average (EMA) smoothing
-    mean_ilr_smooth_ema = mean_relative.apply(lambda x: x.ewm(alpha=alpha).mean())
+    mean_smooth_ema = mean_relative.apply(lambda x: x.ewm(alpha=alpha).mean())
     
-    # Plot the original and smoothed series for each ILR variable in the cluster
-    plt.figure(figsize=(12, 6))
+    # Plot EMA smoothed series for each action option
+    for action, color in colors.items():
+        ax.plot(
+            mean_relative.index, mean_smooth_ema[action], 
+            label=action, color=color, linestyle="--"
+        )
     
-    # Plot EMA smoothed series3
-    # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr1"], label="ILR1 (EMA)", linestyle="--", color="blue")
-    # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr2"], label="ILR2 (EMA)", linestyle="--", color="orange")
-    # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr3"], label="ILR3 (EMA)", linestyle="--", color="green")
+    # Formatting for each subplot
+    ax.set_title(f"Cluster {cluster}")
+    ax.set_xlabel("Relative Time")
+    if cluster == 0:  # Add Y-axis label only to the first plot
+        ax.set_ylabel("Action Value")
 
-    plt.plot(mean_relative.index, mean_ilr_smooth_ema["ina"], label="ina (EMA)", linestyle="--", color="blue")
-    plt.plot(mean_relative.index, mean_ilr_smooth_ema["na"], label="na (EMA)", linestyle="--", color="orange")
-    plt.plot(mean_relative.index, mean_ilr_smooth_ema["nna"], label="nna (EMA)", linestyle="--", color="green")
-    plt.plot(mean_relative.index, mean_ilr_smooth_ema["enna"], label="enna (EMA)", linestyle="--", color="red")
-    
-    # Formatting the plot
-    plt.xlabel("Relative Time")
-    plt.ylabel("Action value")
-    plt.title(f"Cluster {cluster} - Original and Smoothed Time Series")
-    plt.legend()
-    plt.show()
+# Add a single legend at the top
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False)
+
+# Adjust layout
+fig.tight_layout(rect=[0, 0, 1, 0.9])  # Leave space for the legend at the top
+plt.show()
