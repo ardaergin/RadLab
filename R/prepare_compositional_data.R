@@ -72,9 +72,19 @@ prepare_compositional_data <- function(data) {
   comp_data <- compositions::acomp(comp_matrix_nozeros)
 
   # Step 5: Perform ilr transformation
-  cat("Performing ilr-transformation... \n")
+  cat("Performing ilr-transformation with custom basis matrix... \n")
+  custom_basis <- matrix(c(
+    0.8660254, 0.0000000, 0.0000000,
+    -0.2886751, 0.8164966, 0.0000000,
+    -0.2886751, -0.4082483, 0.7071068,
+    -0.2886751, -0.4082483, -0.7071068
+  ), nrow = 4, ncol = 3, byrow = TRUE)
 
-  ilr_data <- compositions::ilr(comp_data)
+  # Use the custom basis in the ilr transformation
+  ilr_data <- compositions::ilr(comp_data, V = custom_basis)
+
+  ### compositions::ilrBase(comp_matrix_nozeros)
+  ### ilr_data <- compositions::ilr(comp_data)
 
   # Step 6: Convert ilr_data to a data frame and name the columns
   ilr_df <- as.data.frame(ilr_data)

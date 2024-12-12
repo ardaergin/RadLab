@@ -1,6 +1,6 @@
 ---
 title: "Radicalization Lab"
-subtitle: "Code sheet 3: Combining datasets"
+subtitle: "Code sheet 4: Main analysis"
 author: "Arda Ergin"
 output:
   rmdformats::downcute:
@@ -32,14 +32,65 @@ library(zCompositions)
 
 # Import and combining
 ```{r Imports}
-load('data_working/d_study1.Rdata')
-load('data_working/d_study2.Rdata')
-load('data_working/d_study3.Rdata')
-load('data_working/d_study4.Rdata')
-load('data_working/d_study5.Rdata')
-load('data_working/d_study6.Rdata')
+load('../data/data_ilr_transformed/combined_data.Rdata')
 ```
 
+```{r}
+library(MCMCglmm)
+
+# Priors
+prior <- list(
+  R = list(V = diag(3), nu = 0.002),  # rcov prior
+  G = list(
+    G1 = list(V = diag(3), nu = 10),      # prior for ID
+    G2 = list(V = diag(3), nu = 10),      # prior for ID:time
+    G3 = list(V = diag(3), nu = 10)       # prior for Experiment
+  )
+)
+
+# Model
+mcmc_model <- MCMCglmm::MCMCglmm(
+  cbind(ilr1, ilr2, ilr3) ~ trait:(time + excluded + injustice + personal + violence) - 1,
+  random = ~ us(trait):ID + idh(trait):ID:time + us(trait):Experiment,
+  rcov = ~ us(trait):units,
+  family = rep("gaussian", 3),
+  data = df,
+  prior = prior,
+  verbose = FALSE
+)
+
+# save(mcmc_model, file = "../data/models/mcmc_results_study1.Rdata")
+
+summary(mcmc_model)
+```
+
+
+```{r}
+# For d_study1
+ilr1_model <- lmerTest::lmer(
+  ilr1 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr1_model)
+
+ilr2_model <- lmerTest::lmer(
+  ilr2 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr2_model)
+
+ilr3_model <- lmerTest::lmer(
+  ilr3 ~ time + excluded + injustice + personal + violence +
+    (1 + time | ID),
+  data = df,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(ilr3_model)
+```
 
 
 
