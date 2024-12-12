@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import RobustScaler, StandardScaler
+from tslearn.clustering import TimeSeriesKMeans
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 
 print("=========================")
 print("Running DTW clustering...")
@@ -59,77 +62,68 @@ for column_group in [ilr_moving_avg_cols, ilr_ema_cols]:
         # Add Fourier features back to the dataframe
         df = df.join(fourier_df, on='ID')
 
+# Fourier transformation
+fourier_components = 2
+# Compute Fourier transform for each 'ilr' variable per participant
+for column_group in [ilr_moving_avg_cols, ilr_ema_cols]:
+    for col in column_group:
+        def compute_fourier(x):
+            fft_vals = np.fft.fft(x)
+            # Retain only the first N components (real and imaginary parts)
+            return np.hstack([fft_vals.real[:fourier_components], fft_vals.imag[:fourier_components]])
 
+        # Apply Fourier transformation and store as separate columns
+        fourier_df = (
+            df.groupby('ID')[col]
+            .apply(lambda x: compute_fourier(x.values))
+            .apply(pd.Series)
+            .rename(columns=lambda i: f'{col}_fourier_2_{i+1}')
+        )
 
-##### Prepare Time Series Data for Clustering #####
-time_series_data = []
-grouped = df.groupby("ID")
+        # Add Fourier features back to the dataframe
+        df = df.join(fourier_df, on='ID')
 
+# Selecting the feature columns
 feature_columns = [
     'relative_time',
     'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean',
     'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std',
     'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min',
     'ilr1_residual_max', 'ilr2_residual_max', 'ilr3_residual_max',
-
-    # 'ilr1_deviation', 'ilr2_deviation', 'ilr3_deviation',
-    # 'excluded_time_interaction', 'injustice_time_interaction', 'personal_time_interaction', 'violence_time_interaction',
-    # 'ilr1_moving_avg', 'ilr2_moving_avg', 'ilr3_moving_avg', 
-    # 'ilr1_ema', 'ilr2_ema', 'ilr3_ema',
-    #'ilr1_residual', 'ilr2_residual', 'ilr3_residual',
-    #'ilr1_fourier_1', 'ilr2_fourier_1', 'ilr3_fourier_1',
-    # 'ilr1_fourier_2', 'ilr2_fourier_2', 'ilr3_fourier_2'
-    # 'ilr1_moving_avg_fourier_1', 'ilr2_moving_avg_fourier_1', 'ilr3_moving_avg_fourier_1',
-    # 'ilr1_moving_avg_fourier_2', 'ilr2_moving_avg_fourier_2', 'ilr3_moving_avg_fourier_2',
-    # 'ilr1_residual_fourier_1', 'ilr2_residual_fourier_1', 'ilr3_residual_fourier_1',
-
     # 'ilr1_moving_avg_residual_fourier_1', 'ilr2_moving_avg_residual_fourier_1', 'ilr3_moving_avg_residual_fourier_1',
-    # 'ilr1_moving_avg_residual_fourier_2', 'ilr2_moving_avg_residual_fourier_2', 'ilr3_moving_avg_residual_fourier_2'
-
-    # 'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
-    # 'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
-
-    'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', 'ilr3_residual_ema_fourier_1',
-    'ilr1_residual_ema_fourier_2', 'ilr2_residual_ema_fourier_2', 'ilr3_residual_ema_fourier_2'
+    'ilr1_residual_ema_fourier_1', 'ilr2_residual_ema_fourier_1', # 'ilr3_residual_ema_fourier_1',
+    # 'ilr3_residual_ema_fourier_2_1', 'ilr3_residual_ema_fourier_2_3', 'ilr3_residual_ema_fourier_2_4'
 ]
+from sklearn.preprocessing import RobustScaler
+feature_columns_to_scale = [col for col in feature_columns if col != 'relative_time']
+print("Scaling the columns:", feature_columns_to_scale)
+df[feature_columns_to_scale] = RobustScaler().fit_transform(df[feature_columns_to_scale])
 
 print("====================")
 print(f"{len(feature_columns)} features used:")
 print(feature_columns)
 
 
-from sklearn.preprocessing import RobustScaler
-feature_columns_to_scale = [
-    'ilr1_residual_mean', 'ilr2_residual_mean', 'ilr3_residual_mean',
-    'ilr1_residual_std', 'ilr2_residual_std', 'ilr3_residual_std',
-    'ilr1_residual_min', 'ilr2_residual_min', 'ilr3_residual_min',
-    'ilr1_residual_max', 'ilr2_residual_max', 'ilr3_residual_max',
-    'ilr1_residual_moving_avg_fourier_1', 'ilr2_residual_moving_avg_fourier_1', 'ilr3_residual_moving_avg_fourier_1',
-    'ilr1_residual_moving_avg_fourier_2', 'ilr2_residual_moving_avg_fourier_2', 'ilr3_residual_moving_avg_fourier_2',
-]
-# df[feature_columns_to_scale] = RobustScaler().fit_transform(df[feature_columns_to_scale])
 
-# Preprocess the time series data for each participant
+##### Prepare Time Series Data for Clustering #####
+time_series_data = []
+grouped = df.groupby("ID")
 for participant, group in grouped:
     group_sorted = group.sort_values("time")
     time_series = group_sorted[feature_columns].values
-    
-    # Pad or truncate each participant's time series to the same length
+
+    # Padding or truncating each participant's time series to the same length
     max_length = 15 # The 'time' in the Experiments ranges from 6 to 15
     if len(time_series) < max_length:
         time_series = np.pad(time_series, ((0, max_length - len(time_series)), (0, 0)), 'constant', constant_values=np.nan)
     else:
         time_series = time_series[:max_length]
-    
     time_series_data.append(time_series)
-
-# Convert to numpy array for clustering
 time_series_data = np.array(time_series_data)
 
 
-##### Clustering #####
-from tslearn.clustering import TimeSeriesKMeans
 
+##### Clustering #####
 n_clusters = 3
 print("====================")
 print("Number of clusters:", n_clusters)
@@ -140,17 +134,71 @@ df["cluster"] = df["ID"].map(dict(zip(grouped.groups.keys(), labels)))
 
 # Create a summary of the number of participants from each experiment within each cluster
 experiment_cluster_summary = df.groupby(['cluster', 'Experiment']).size().unstack(fill_value=0)
+print("====================")
+print("Clustering summaries:")
+print("====================")
 print(experiment_cluster_summary)
+print("====================")
 
-# Count the number of participants in each cluster
+# Compute the cluster-wise percentages for each experiment
+experiment_cluster_summary_percentages = experiment_cluster_summary.div(experiment_cluster_summary.sum(axis=0), axis=1) * 100
+experiment_cluster_summary_percentages = experiment_cluster_summary_percentages.round(1)
+print(experiment_cluster_summary_percentages)
+print("====================")
+
 cluster_counts = df["cluster"].value_counts()
-cluster_summary = df.groupby("cluster")[["ilr1", "ilr2", "ilr3", "excluded", "injustice", "personal", "violence"]].mean()
-print(cluster_summary)
+print(cluster_counts)
+print("====================")
 
+cluster_summary = df.groupby("cluster")[["ina", "na", "nna", "enna", "ilr1", "ilr2", "ilr3"]].mean()
+print(cluster_summary)
+print("====================")
 
 
 ##### Evaluation (per study!) #####
-from sklearn.metrics import silhouette_score, davies_bouldin_score
+from tslearn.metrics import dtw, dtw_path
+import numpy as np
+
+def dtw_silhouette_score(X, labels):
+    n_samples = len(X)
+    if n_samples <= 1:  # Handle cases with only one or zero samples
+        return np.nan
+    silhouettes = []
+    for i in range(n_samples):
+        label_i = labels[i]
+        a_i = 0
+        count_a = 0
+        for j in range(n_samples):
+            if i != j and labels[j] == label_i:  # Exclude self-comparison
+                a_i += dtw(X[i], X[j])
+                count_a += 1
+        if count_a == 0:  # Avoid division by zero if there's only one element in the cluster
+            a_i = 0
+        else:
+            a_i /= count_a
+
+        b_i = np.inf
+        for label_j in set(labels):
+            if label_j != label_i:
+                b_j = 0
+                count_b = 0
+                for k in range(n_samples):
+                    if labels[k] == label_j:
+                        b_j += dtw(X[i], X[k])
+                        count_b += 1
+                if count_b > 0:
+                    b_j /= count_b
+                    b_i = min(b_i, b_j)
+        if b_i == np.inf:
+            s_i = 0.0
+        else:
+            s_i = (b_i - a_i) / max(a_i, b_i) if max(a_i, b_i) != 0 else 0.0 # Avoid division by zero
+        silhouettes.append(s_i)
+    return np.nanmean(silhouettes)
+
+silhouette_scores = []
+davies_bouldin_scores = []
+dtw_silhouette_scores = []
 
 # Assume you have a variable `participant_ids` which stores the participant IDs in the exact order they appear in `time_series_data` and `labels`.
 grouped = df.groupby("ID")
@@ -211,70 +259,69 @@ for exp in experiments:
     except ValueError:
         db = np.nan
     
+    dtw_sil = dtw_silhouette_score(truncated_series, exp_labels)
+    print(f"Experiment {exp}: DTW Silhouette Score = {dtw_sil}")
+    dtw_silhouette_scores.append(dtw_sil)
+
     print(f"Experiment {exp}: Silhouette Score = {sil}, Davies-Bouldin Score = {db}")
+    silhouette_scores.append(sil)
+    davies_bouldin_scores.append(db)
+
+# Calculating average and range
+silhouette_avg = sum(silhouette_scores) / len(silhouette_scores)
+davies_bouldin_avg = sum(davies_bouldin_scores) / len(davies_bouldin_scores)
+
+print("====================")
+print("silhouette_scores")
+print("average:", silhouette_avg)
+print("max:", max(silhouette_scores))
+print("min:", min(silhouette_scores))
+
+print("====================")
+print("davies_bouldin_scores")
+print("average:", davies_bouldin_avg)
+print("max:", max(davies_bouldin_scores))
+print("min:", min(davies_bouldin_scores))
+print("====================")
+
+# Calculating average and range for DTW Silhouette
+dtw_silhouette_avg = np.nanmean(dtw_silhouette_scores)
+print("====================")
+print("DTW silhouette_scores")
+print("average:", dtw_silhouette_avg)
+print("max:", np.nanmax(dtw_silhouette_scores))
+print("min:", np.nanmin(dtw_silhouette_scores))
+print("====================")
 
 
-
-# ##### Plotting #####
-# from scipy.signal import savgol_filter
-# import matplotlib.pyplot as plt
-
-# n_clusters = 3
-# alpha = 0.3  # Smoothing factor for EMA
-# savgol_window = 3  # Window length for Savitzky-Golay filter
-# savgol_polyorder = 1  # Polynomial order for Savitzky-Golay filter
-
-# for cluster in range(n_clusters):
-#     cluster_data = df[df['cluster'] == cluster]
-    
-#     # mean_relative = cluster_data.groupby('relative_time')[['ilr1', 'ilr2', 'ilr3']].mean()
-#     mean_relative = cluster_data.groupby('relative_time')[['ina', 'na', 'nna', 'enna']].mean()
-    
-#     # Apply Exponential Moving Average (EMA) smoothing
-#     mean_ilr_smooth_ema = mean_relative.apply(lambda x: x.ewm(alpha=alpha).mean())
-    
-#     # Plot the original and smoothed series for each ILR variable in the cluster
-#     plt.figure(figsize=(12, 6))
-    
-#     # Plot EMA smoothed series3
-#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr1"], label="ILR1 (EMA)", linestyle="--", color="blue")
-#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr2"], label="ILR2 (EMA)", linestyle="--", color="orange")
-#     # plt.plot(mean_relative.index, mean_ilr_smooth_ema["ilr3"], label="ILR3 (EMA)", linestyle="--", color="green")
-
-#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["ina"], label="ina (EMA)", linestyle="--", color="blue")
-#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["na"], label="na (EMA)", linestyle="--", color="orange")
-#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["nna"], label="nna (EMA)", linestyle="--", color="green")
-#     plt.plot(mean_relative.index, mean_ilr_smooth_ema["enna"], label="enna (EMA)", linestyle="--", color="red")
-    
-#     # Formatting the plot
-#     plt.xlabel("Relative Time")
-#     plt.ylabel("Action value")
-#     plt.title(f"Cluster {cluster} - Original and Smoothed Time Series")
-#     plt.legend()
-#     plt.show()
-
+##### Plotting #####
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+# Define font properties
+font_size = 19
 
 # Set Seaborn style
 sns.set(style="whitegrid")
 
 # Parameters
 n_clusters = 3
-alpha = 0.3  # Smoothing factor for EMA
-savgol_window = 3  # Window length for Savitzky-Golay filter
-savgol_polyorder = 1  # Polynomial order for Savitzky-Golay filter
+alpha = 0.05  # Smoothing factor for EMA
 
 # Set up a grid for side-by-side plots
 fig, axes = plt.subplots(1, n_clusters, figsize=(15, 5), sharey=True)
 
 # Define colors for the action options
 colors = {
-    "ina": "blue",
-    "na": "orange",
-    "nna": "green",
-    "enna": "red",
+    "ina": "#4E79A7",  # Muted Blue
+    "na": "#F28E2B",  # Soft Orange
+    "nna": "#76B7B2",  # Teal
+    "enna": "#E15759",  # Soft Red
 }
+
+# Calculate the number of unique IDs per cluster
+id_counts = df.groupby('cluster')['ID'].nunique()
+total_ids = df['ID'].nunique()
 
 # Loop through clusters
 for cluster, ax in enumerate(axes):
@@ -288,19 +335,44 @@ for cluster, ax in enumerate(axes):
     for action, color in colors.items():
         ax.plot(
             mean_relative.index, mean_smooth_ema[action], 
-            label=action, color=color, linestyle="--"
+            label=action, color=color, linestyle="-"
         )
     
     # Formatting for each subplot
-    ax.set_title(f"Cluster {cluster}")
-    ax.set_xlabel("Relative Time")
-    if cluster == 0:  # Add Y-axis label only to the first plot
-        ax.set_ylabel("Action Value")
+    
+    percentage = (id_counts[cluster] / total_ids) * 100
 
-# Add a single legend at the top
-handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False)
+    # Formatting for each subplot
+    ax.set_title(
+        r"$\bf{Cluster\ " + str(cluster + 1) + r"}$" + "\n" + 
+        r"($\it{N}$" + f" = {id_counts[cluster]}, {percentage:.1f}%)",
+        fontsize=font_size
+    )
+
+
+
+    if cluster == 0:  # Add Y-axis label only to the first plot
+        ax.set_ylabel("Action Value", fontsize=font_size)
+    ax.tick_params(axis='both', labelsize=font_size - 2)
+    ax.grid(False)
+
+# Add a common x-axis label
+fig.text(0.5, 0.01, "Relative Time", ha="center", fontsize=font_size)
+
+# Add a legend
+action_labels = {
+    "ina": "Inaction",
+    "na": "Normative Action",
+    "nna": "Non-Normative Action",
+    "enna": "Extreme Non-Normative Action",
+}
+
+fig.legend(
+    handles=[plt.Line2D([0], [0], color=color, linestyle="-", lw=2) for color in colors.values()],
+    labels=list(action_labels.values()),  # Use descriptive labels
+    loc="upper center", ncol=4, frameon=False, fontsize=font_size
+)
 
 # Adjust layout
-fig.tight_layout(rect=[0, 0, 1, 0.9])  # Leave space for the legend at the top
+fig.tight_layout(rect=[0, 0.05, 1, 0.9])  # Leave space for the legend and the common x-label
 plt.show()
