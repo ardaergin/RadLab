@@ -2,8 +2,8 @@
 #SBATCH --job-name=RadLab
 #SBATCH --output=outputs/logs/%x_%j.txt # "%x" uses the job-name we pass
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
 #SBATCH --time=02:00:00
 #SBATCH --partition=genoa
 

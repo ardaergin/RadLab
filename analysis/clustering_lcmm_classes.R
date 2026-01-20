@@ -1,14 +1,18 @@
 #!/usr/bin/env Rscript
 
+# 0. Disable renv sandbox to speed up parallel workers
+# This must be done BEFORE loading packages
+Sys.setenv(RENV_CONFIG_SANDBOX_ENABLED = "FALSE")
+
 # Loading the shared setup (Libraries + Data + Preprocessing + Formulas)
 source("analysis/clustering_setup.R")
+library(parallel)
 
 # Class Enumeration (Quadratic Mixture) --------------------------------
 message("\nRunning Class Enumeration (Quadratic Mixture)...")
 
 
 # --- Step 0: Detect and Report Cores ---
-library(parallel)
 
 # 1. Check what the hardware actually has
 n_physical <- parallel::detectCores(logical = FALSE)
@@ -39,6 +43,7 @@ if (file.exists(path_m1)) {
   stop("Baseline model (m_a5_all_controls_quad.rds) not found! Run the base script first.")
 }
 
+
 # --- Step 2: The Loop (k = 2, 3, 4) ---
 message("\nStarting Loop (2 to 4 classes)...")
 
@@ -46,21 +51,30 @@ for (k in 2:4) {
 
   message(paste0("\n===== Fitting Model with ", k, " Classes ====="))
 
-  # Gridsearch: Tries 30 random starting points to avoid local maxima
-  # minit = m_init uses the parameters from the 1-class model as a seed
-  m_k <- lcmm::gridsearch(
-    rep = 32,
-    maxiter = 500,
-    minit = m_init,
-    cl = n_cores,
+  # CRITICAL FIX FOR PARALLEL: Inject the VALUE of k into the call.
+  # We can use bquote() to turn 'ng = k' into 'ng = 2' (or 3, 4) explicitly.
+  # This prevents the "object 'k' not found" error on the parallel workers.
+  run_model_structure <- bquote(
     multlcmm(
       data = model_data, subject = "ID", link = "5-equi-splines",
       # Fixed structure: Full controls + Quadratic Time
       fixed = formula_A_all_controls_quad,
       # Mixture: Allow Intercept, Slope, AND Curve to differ by class
       mixture = ~ time + I(time^2),
-      random = ~ time, ng = k
+      random = ~ time,
+      ng = .(k) # <--- The .(k) injects the actual number (e.g., 2)
     )
+  )
+
+  # Gridsearch: Tries 32 random starting points
+  m_k <- lcmm::gridsearch(
+    rep = 32,
+    maxiter = 500,
+    minit = m_init,
+    cl = n_cores,
+    # We evaluate the structure locally first so gridsearch receives a
+    # clear, hardcoded model object to distribute to workers.
+    eval(run_model_structure)
   )
 
   # Save the result
