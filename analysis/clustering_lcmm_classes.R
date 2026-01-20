@@ -51,29 +51,28 @@ clusterExport(cl, "m_init", envir = environment())
 for (k in 2:4) {
   message(paste0("\n===== Fitting Model with ", k, " Classes ====="))
 
-  # Build the *actual* multlcmm call that gridsearch expects
-  m_call <- substitute(
-    lcmm::multlcmm(
-      data    = model_data,
-      subject = "ID",
-      link    = "5-equi-splines",
-      fixed   = formula_A_all_controls_quad,
-      mixture = ~ time + I(time^2),
-      random  = ~ time,
-      ng      = K
+  gs_call <- substitute(
+    lcmm::gridsearch(
+      m = lcmm::multlcmm(
+        data    = model_data,
+        subject = "ID",
+        link    = "5-equi-splines",
+        fixed   = formula_A_all_controls_quad,
+        mixture = ~ time + I(time^2),
+        random  = ~ time,
+        ng      = K
+      ),
+      rep     = 32,
+      maxiter = 500,
+      minit   = m_init,
+      cl      = cl
     ),
     list(K = k)
   )
 
-  m_k <- lcmm::gridsearch(
-    m       = m_call,
-    rep     = 32,
-    maxiter = 500,
-    minit   = m_init,   # or just minit = m_init (even if exported)
-    cl      = cl
-  )
+  m_k <- eval(gs_call)
 
-  saveRDS(m_k, here::here("outputs", "models", paste0("m_quad_", k, "class.rds")))
+  saveRDS(m_k, here("outputs", "models", paste0("m_quad_", k, "class.rds")))
   message(paste0("\n===== Summary for ", k, "-Class Model ====="))
   print(summary(m_k))
 }
