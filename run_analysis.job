@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=RadLab_Generic
-#SBATCH --output=output/logs/%x_%j.txt # "%x" uses the job-name we pass
+#SBATCH --output=outputs/logs/%x_%j.txt # "%x" uses the job-name we pass
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
