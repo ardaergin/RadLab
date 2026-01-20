@@ -3,6 +3,6 @@
 .RData
 .Ruserdata
 .DS_Store
-/.venv
 /data
-/drafts
+/data-raw
+log.md

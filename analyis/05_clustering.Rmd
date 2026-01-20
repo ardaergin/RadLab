@@ -1,0 +1,188 @@
+---
+title: "Radicalization Lab"
+subtitle: "Code sheet 5: Clustering"
+author: "Arda Ergin"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+---
+
+# Setup
+```{r, message=FALSE, warning=FALSE}
+devtools::load_all(here::here())
+library(here)
+library(dplyr)
+library(lcmm)  # The heavy lifter for GMM/LCGA
+library(ggplot2)
+```
+
+```{r}
+df_raw <- readRDS(
+  here::here("data", "experiments_with_transforms.rds")
+)
+```
+
+
+
+
+
+# Preprocessing
+
+```{r}
+model_data <- df_raw %>%
+  # 1. Select only what we need
+  dplyr::select(
+    ID, time, experiment,
+    ina_sqrt, na_sqrt, nna_sqrt, enna_sqrt,
+    excluded, injustice, personal, violence
+  ) %>%
+  # ID and time needs to be numeric for lcmm
+  mutate(
+    ID = as.numeric(as.factor(ID)),
+    # LCMMP requires numeric time
+    time = as.numeric(as.factor(time))
+  )
+
+# Normalizing time!
+model_data$time <- model_data$time / max(model_data$time)
+
+cat("Data ready for modeling.",
+    "\n")
+cat("N participants:", 
+    length(unique(model_data$ID)),
+    "\n")
+cat("N unique time points:",
+    length(unique(model_data$time)))
+```
+
+
+
+
+```{r}
+# Define the multivariate formula
+fixed_formula <- enna_sqrt ~ time + excluded + injustice + personal + violence
+
+
+########## Model 1 ##########
+m1 <- multlcmm(
+  fixed = fixed_formula,
+  random = ~ time, # Random Intercept (no Random Slope)
+  ## Translation: "Every participant starts at a different level, but they all change at the same speed (parallel lines)."
+  subject = "ID",
+  ng = 1, # 1 Class
+  data = model_data,
+  link = "linear" # Hellinger vars are continuous
+)
+
+summary(m1)
+```
+
+
+```{r}
+# Define the multivariate formula
+fixed_formula <- enna_sqrt ~ time + excluded + injustice + personal + violence
+
+
+########## Model 1 ##########
+m2 <- gridsearch(
+  rep = 10, 
+  maxiter = 10, 
+  minit = m1,
+  multlcmm(
+    fixed = enna_sqrt ~ time + excluded + injustice + personal + violence,
+    mixture = ~ time,
+    random = ~ time, 
+    subject = "ID",
+    ng = 2,                  # 2 Classes
+    data = model_data,
+    link = "linear"
+  )
+)
+
+summary(m2)
+```
+
+
+
+# multlcmm
+
+## Hellinger (Square Root)
+```{r}
+# Define the multivariate formula
+fixed_formula <- ina_sqrt + na_sqrt + nna_sqrt ~ time
+
+
+
+########## Model 1 ##########
+m1 <- multlcmm(
+  fixed = fixed_formula,
+  random = ~ 1, # Random Intercept (no Random Slope)
+  ## Translation: "Every participant starts at a different level, but they all change at the same speed (parallel lines)."
+  subject = "ID",
+  ng = 1, # 1 Class
+  data = model_data,
+  link = "linear" # Hellinger vars are continuous
+)
+
+
+
+########## Model 2 ##########
+m2 <- multlcmm(
+  fixed = fixed_formula,
+  random = ~ time, # Random Intercept + Random Slope
+  ## Translation: "Every participant starts at a different level AND changes at a different speed."
+  subject = "ID",
+  ng = 1, # 1 Class
+  data = model_data,
+  link = "linear", # Hellinger vars are continuous
+)
+
+
+
+########## Model 3 ##########
+# Goal: Find 2 distinct trajectories.
+# CRITICAL CHANGE: Added 'mixture' argument.
+# CRITICAL CHANGE: Used gridsearch because we can't plug m2 directly into B (dimensions differ).
+m3 <- gridsearch(
+  rep = 10, 
+  maxiter = 10, 
+  minit = m1, # minit helps start the search
+  multlcmm(
+    fixed = fixed_formula,
+    mixture = ~ time, # Classes have different intercepts & slopes
+    random = ~ time,  # (Or ~1 if M2 wasn't better than M1)
+    subject = "ID",
+    ng = 2,           # 2 Classes
+    data = model_data,
+    link = "linear"
+    )
+)
+
+
+
+########## Model 4 ##########
+m4 <- gridsearch(
+  rep = 10, 
+  maxiter = 10, 
+  minit = m1, # minit helps start the search
+  multlcmm(
+    fixed = fixed_formula,
+    mixture = ~ time, # Classes have different intercepts & slopes
+    random = ~ time,
+    subject = "ID",
+    ng = 3,           # 3 Classes
+    data = model_data,
+    link = "linear"
+    )
+)
+```
+
+
+
+## ILR
+
+
+
+# Regression
+
+

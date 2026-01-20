@@ -7,22 +7,30 @@
 wide_to_long(data, name_data, n_vignettes, IDvar = "ID")
 }
 \arguments{
-\item{data}{the data frame that you want to transform from the wide format to the long format}
+\item{data}{A data frame where the first (n_vignettes * 4) columns are
+interleaved vignette responses (ina, na, nna, enna).}
 
-\item{name_data}{a data frame with names of vignettes and their corresponding order}
+\item{name_data}{A data frame with names of vignettes and their
+corresponding order (must contain 'order' and 'Vignette' columns).}
 
-\item{n_vignettes}{Total number of vignettes}
+\item{n_vignettes}{Total number of vignettes (integer).}
 
-\item{IDvar}{ID variable}
+\item{IDvar}{Character string specifying the name of the ID variable.
+Defaults to "ID".}
 }
 \value{
-A long data frame suitable for modelling
+A long-format data frame with columns: ID, time, ina, na, nna, enna,
+and Vignette name.
 }
 \description{
-Wide to Long Transformation for RadLab Vignette Data
+Transforms interleaved vignette data from wide to long format.
+**Note:** This function assumes that the vignette response columns
+(4 per vignette) are the FIRST columns in the data frame.
 }
 \examples{
-d_hartog_long <- d_hartog \%>\% RadLab::wide_to_long(
-    name_data = sv_hartog,
-    n_vignettes = 15)
+data_long <- data_wide \%>\% RadLab::wide_to_long(
+  name_data = name_data,
+  n_vignettes = 15,
+  IDvar = "ID"
+)
 }

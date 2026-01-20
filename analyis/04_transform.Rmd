@@ -1,0 +1,183 @@
+---
+title: "Radicalization Lab"
+subtitle: "Code sheet 4: Data Transformations"
+author: "Arda Ergin"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+---
+
+# Setup
+```{r, message=FALSE, warning=FALSE}
+devtools::load_all(here::here())
+library(here)
+library(dplyr)
+library(compositions)
+library(zCompositions)
+library(knitr)
+```
+
+
+
+
+
+# Loading data
+```{r}
+combined_df <- readRDS(
+  here::here("data", "experiments_merged.rds")
+)
+cat("Loaded data with", nrow(combined_df), "observations.")
+```
+
+
+
+
+
+# CoDA
+
+## Prepare proportions
+```{r}
+main_df <- combined_df
+main_df$ina_prop  <- main_df$ina  / 100
+main_df$na_prop   <- main_df$na   / 100
+main_df$nna_prop  <- main_df$nna  / 100
+main_df$enna_prop <- main_df$enna / 100
+```
+
+
+## CZM + ILR
+
+### Define Basis Matrices
+```{r}
+# Theory
+custom_basis_theory <- matrix(c(
+  0.8660254, 0.0000000, 0.0000000,    # inaction
+  -0.2886751, 0.8164966, 0.0000000,   # normative
+  -0.2886751, -0.4082483, 0.7071068,  # non-normative
+  -0.2886751, -0.4082483, -0.7071068  # extreme non-normative
+),
+nrow = 4, ncol = 3, byrow = TRUE,
+dimnames = list(
+  c("ina","na","nna","enna"),
+  c("b1","b2","b3")
+  )
+)
+
+# Empirical
+custom_basis_empirical <- matrix(
+  c(
+    0.5,   1/sqrt(2),      0,          # inaction
+    0.5,  -1/sqrt(2),      0,          # normative
+   -0.5,       0,       1/sqrt(2),     # non-normative
+   -0.5,       0,      -1/sqrt(2)      # extreme non-normative
+  ),
+  nrow = 4, ncol = 3, byrow = TRUE,
+  dimnames = list(
+    c("ina","na","nna","enna"),
+    c("b1","b2","b3")
+  )
+)
+custom_basis_matrices <- list(
+  theory    = custom_basis_theory, 
+  empirical = custom_basis_empirical
+)
+```
+
+### Apply Zero Replacement (CZM) and ILR transformation
+```{r}
+# 1. Create matrix of proportions
+comp_matrix <- as.matrix(
+  main_df[, c('ina_prop', 'na_prop', 'nna_prop', 'enna_prop')]
+)
+
+# 2. Replace zeros (Count Zero Multiplicative method)
+comp_matrix_nozeros <- zCompositions::cmultRepl(
+  comp_matrix,
+  method = "CZM",
+  output = "prop",
+  label = 0,
+  z.delete = FALSE
+)
+
+# 3. Create acomp object
+acomp_obj <- compositions::acomp(comp_matrix_nozeros)
+
+# 4. Loop through bases matrices and append ILR coordinates
+for (basis_name in names(custom_basis_matrices)) {
+  cat(paste("Calculating ILR coords for:", basis_name, "\n"))
+  
+  # Perform ILR
+  V <- custom_basis_matrices[[basis_name]]
+  ilr_mat <- compositions::ilr(acomp_obj, V = V)
+  ilr_df  <- as.data.frame(ilr_mat)
+  
+  # Rename columns (e.g., ilr_theory_1, ilr_theory_2...)
+  colnames(ilr_df) <- paste0(
+    "ilr_", basis_name, "_", 1:ncol(ilr_df)
+  )
+  
+  # Bind to main df
+  main_df <- cbind(main_df, ilr_df)
+}
+
+# Now we have: main_df, acomp_obj
+```
+
+### ILR visualizations
+```{r}
+# Compute the variation matrix
+var_mat <- compositions::variation(acomp_obj)
+
+# Pretty‐print and heatmap
+kable(round(var_mat, 3), caption = "Aitchison Variation Matrix")
+stats::heatmap(var_mat, symm=TRUE, main="Aitchison Variation")
+```
+
+```{r}
+# Compute CLR (centered log‐ratio)
+clr_df <- as.data.frame(clr(acomp_obj))
+
+# PCA
+p <- prcomp(clr_df, scale.=FALSE)
+
+# Biplot
+biplot(p, xlabs=rep(".", nrow(clr_df)), main="CLR‐PCA Biplot")
+```
+
+If my interpretation is correct, this PCA plot above is kind of a dead giveaway for the zero-problem we have. We see that enna and ina vary in the same direction, and this is suggestive of the zero-replacement. I think..
+
+
+
+
+
+## Hellinger transformation (square root)
+This is our primary option for trajectory clustering. It uses the raw proportions (including zeros) directly.
+
+```{r}
+cat("Calculating Hellinger coordinates (Square Root of raw proportions)...\n")
+
+main_df$ina_sqrt  <- sqrt(main_df$ina_prop)
+main_df$na_sqrt   <- sqrt(main_df$na_prop)
+main_df$nna_sqrt  <- sqrt(main_df$nna_prop)
+main_df$enna_sqrt <- sqrt(main_df$enna_prop)
+
+# Verify creation
+head(main_df[, c("ina_sqrt", "na_sqrt", "nna_sqrt", "enna_sqrt")])
+```
+
+
+
+
+
+# Save
+```{r}
+saveRDS(main_df, file = here::here(
+  "data", "experiments_with_transforms.rds")
+)
+cat("Saved transformed data to data/experiments_with_transforms.rds")
+```
+
+
+
+
+

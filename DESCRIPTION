@@ -10,18 +10,23 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports: 
+    markdown,
+    rmarkdown,
+    rmdformats,
+    knitr,
+    devtools,
     dplyr,
-    ggplot2,
+    tidyr,
+    here,
     haven,
     labelled,
+    readxl,
+    ggplot2,
+    sjPlot,
+    zoo,
     lme4,
     lmerTest,
-    magrittr,
-    MuMIn,
-    optimx,
-    readxl,
-    sjPlot,
-    stats,
-    tidyr,
-    zoo
-RoxygenNote: 7.2.3
+    compositions,
+    zCompositions,
+    lcmm
+RoxygenNote: 7.3.3

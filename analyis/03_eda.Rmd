@@ -1,0 +1,119 @@
+---
+title: "Radicalization Lab"
+subtitle: "Code sheet 3: Exploratory Data Analysis"
+author: "Arda Ergin"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+---
+
+# Setup
+```{r, message=FALSE, warning=FALSE}
+devtools::load_all(here::here())
+library(here)
+library(dplyr)
+library(compositions)
+library(zCompositions)
+library(knitr)
+```
+
+
+
+
+
+# Loading data
+```{r}
+combined_df <- readRDS(
+  here::here("data", "experiments_merged.rds")
+)
+cat("Loaded data with", nrow(combined_df), "observations.")
+```
+
+
+
+
+
+# Exploratory Data Analysis
+
+## Checking NAs
+```{r}
+# Numerical Check for Missing Values
+cat("=== Missing Values (NAs) ===\n")
+cols_to_check <- c("ina", "na", "nna", "enna")
+
+cat("Count:\n")
+colSums(is.na(combined_df[cols_to_check]))
+
+cat("Proportions:\n")
+colMeans(is.na(combined_df[cols_to_check]))
+
+# Verification: The columns must not have NAs for CoDA
+if(any(is.na(combined_df[cols_to_check]))) {
+  warning("STOP: You have NAs in your compositional columns. You must impute or remove them before proceeding.")
+} else {
+  cat("\nCheck passed: No NAs found in compositional columns.\n")
+}
+```
+
+
+## Checking Zeros
+```{r}
+# Numerical Check
+cat("=== Zeros ===\n")
+cat("Count:\n")
+cols_to_check <- c("ina", "na", "nna", "enna")
+colSums(combined_df[cols_to_check] == 0, na.rm = TRUE)
+cat("Proportions:\n")
+colMeans(combined_df[cols_to_check] == 0, na.rm = TRUE)
+```
+
+```{r}
+# Visual Check
+comp_cols <- combined_df[, c("ina", "na", "nna", "enna")]
+
+# label = 0 tells it what value to treat as zero
+zPatterns(comp_cols, label = 0)
+```
+
+**Interpretation of the pattern table above**:
+- There are $15$ possible scenarios present on missingness. Since we have $4$ variables, there are $2^4 = 16$ theoretically possible patterns. Since we are seeing $15$, it means 1 pattern, likely the "all zeros" pattern, is missing, which makes sense because participants must allocate points somewhere.
+- In the plot/table, a *colored cell* (or "-" in the text output) means **a Non-Zero value** (they allocated points), and a *blue cell* (or "+" in text) means **a Zero** (they ignored that option). E.g., ("0", "no 0", "no 0", "no 0") means "ina is zero, but others are non-zero".
+- The horizontal bars on the right show how many participants fall into that specific "Row" (Pattern). The longer the bar, the more common that behavior is.
+- The vertical bars at the very top of the grid show the total count of zeros for each column (ina, na, etc.) independently.
+
+## Conclusions on Zeros
+The EDA reveals a massive prevalence of zeros (e.g., $>80%$ in `ina`), indicating these are **structural zeros** (deliberate non-selection) rather than rounded or missing values.
+
+**Problem with Standard CoDA (ILR + Replacement):** Using replacement methods like CZM on structural zeros creates "fictional" small values. In trajectory analysis, this would distort the signal, magnifying the difference between "0 points" (absolute rejection) and "1 point" (minimal acceptance) into a massive logarithmic gap.
+
+**Justification for Hellinger:** The square-root (Hellinger) transformation handles zeros natively without imputation. It maps the data onto a hypersphere, providing a "quasi-isometric" geometry that respects the compositional sum constraint while staying robust to high sparsity.
+
+Therefore, while ILR variables are calculated for comparison, the **Hellinger-transformed variables** will be the primary input for clustering trajectories.
+
+## Distribution Plots
+```{r, fig.width=10, fig.height=6}
+library(ggplot2)
+library(tidyr)
+
+# 1. Reshape data to long format for easy plotting
+long_props <- combined_df %>%
+  dplyr::select(ina, na, nna, enna) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Component",
+    values_to = "Value"
+  )
+
+# 2. Create histograms faceted by component
+ggplot(long_props, aes(x = Value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
+  facet_wrap(~Component, scales = "free_y") +
+  labs(
+    title = "Distribution of Raw Allocation Points (0-100)",
+    subtitle = "Notice the massive spikes at 0 for 'ina' and 'enna'",
+    x = "Points Allocated",
+    y = "Count of Participants"
+  ) +
+  theme_minimal()
+```
+

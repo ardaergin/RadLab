@@ -1,0 +1,111 @@
+---
+title: "Radicalization Lab"
+subtitle: "Code sheet 2: Merging Experiments"
+author: "Arda Ergin"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+---
+
+
+# Setup
+```{r, message=FALSE, warning=FALSE}
+devtools::load_all(here::here())
+library(here)
+library(dplyr)
+library(tidyr)
+```
+
+
+
+
+
+# Loading datasets
+
+```{r}
+load(here::here("data-raw", "01_cleaned", "d_study1.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study2.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study3.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study4.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study5.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study6.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study7.rda"))
+load(here::here("data-raw", "01_cleaned", "d_study8.rda"))
+```
+
+```{r}
+datasets <- list(
+  d_study1 = d_study1, 
+  d_study2 = d_study2, 
+  d_study3 = d_study3, 
+  d_study4 = d_study4, 
+  d_study5 = d_study5, 
+  d_study6 = d_study6, 
+  d_study7 = d_study7, 
+  d_study8 = d_study8
+)
+```
+
+```{r}
+for (name in names(datasets)) {
+  dataset <- datasets[[name]]  
+  cat("Experiment", unique(dataset$experiment),
+      "\n-", length(unique(dataset$time)), "scenarios",
+      "\n-", length(unique(dataset$ID)), "participants")
+  cat("\n")
+}
+```
+
+
+
+
+
+# Fixing variable Types
+We want to create a "condition" variable *per study* AND *per condition*. I.e., an identifier for each unique study-condition combination.
+
+```{r}
+datasets_varibles_fixed <- list()
+
+# Loop through each study data
+for (name in names(datasets)) {
+  dataset <- datasets[[name]]
+
+  dataset <- dataset %>% 
+    dplyr::mutate(
+      
+      gender = as.factor(gender_f),
+
+      condition = as.factor(paste0("Exp", experiment, "_", condition_f)),
+      
+      experiment = as.factor(experiment),
+      
+      # ID = as.numeric(ID)
+    
+    ) %>% 
+    dplyr::select(
+      time, ID, 
+      ina, na, nna, enna,
+      excluded, injustice, personal, violence,
+      Vignette,
+      gender, age,
+      condition,
+      experiment
+    )
+    
+  datasets_varibles_fixed[[name]] <- dataset
+}
+```
+
+
+
+
+
+# Combining and saving
+
+```{r}
+# Merge
+combined_df <- dplyr::bind_rows(datasets_varibles_fixed)
+# Save
+saveRDS(combined_df, file = here::here("data", "experiments_merged.rds"))
+```
+
