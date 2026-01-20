@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # Loading the shared setup (Libraries + Data + Preprocessing + Formulas)
-source("analysis/setup.R")
+source("analysis/clustering_setup.R")
 
 
 # Model Set A: Hellinger, Univariate (ENNA) -----------------------------
