@@ -1,9 +1,7 @@
 
 # 1. Setup ----------------------------------------------------------------
 message("Loading packages...")
-library(devtools)
 library(here)
-devtools::load_all(here())
 library(dplyr)
 library(lcmm)
 
