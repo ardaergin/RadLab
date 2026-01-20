@@ -27,14 +27,11 @@ on.exit(stopCluster(cl), add = TRUE)
 
 message("--> Exporting environment to workers...")
 clusterEvalQ(cl, {
-  library(devtools)
-  library(here)
-  devtools::load_all(here())
   library(lcmm)
   NULL
 })
-
-clusterExport(cl, c("model_data", "formula_A_all_controls_quad"), envir = environment())
+clusterExport(cl, c("model_data", "formula_A_all_controls_quad", "m_init"))
+print(clusterCall(cl, function() paste("worker", Sys.getpid(), "libpaths:", paste(.libPaths(), collapse=" | "))))
 
 # --- Step 1: Load Baseline ---
 path_m1 <- here::here("outputs", "models", "m_a5_all_controls_quad.rds")
@@ -53,7 +50,7 @@ for (k in 2:4) {
 
   gs_call <- substitute(
     lcmm::gridsearch(
-      m = lcmm::multlcmm(
+      m = multlcmm(
         data    = model_data,
         subject = "ID",
         link    = "5-equi-splines",
@@ -73,8 +70,8 @@ for (k in 2:4) {
   m_k <- eval(gs_call)
 
   saveRDS(m_k, here("outputs", "models", paste0("m_quad_", k, "class.rds")))
-  message(paste0("\n===== Summary for ", k, "-Class Model ====="))
   print(summary(m_k))
 }
+
 
 message("\nAnalysis Complete.")
