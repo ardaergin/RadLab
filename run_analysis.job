@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --job-name=RadLab
+#SBATCH --output=output/logs/output_%j.txt
+#SBATCH --error=output/logs/error_%j.txt    # Records errors in your new logs folder
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --partition=genoa
+
+# 1. Load the R version you used for renv
+module load 2023
+module load R/4.3.2-gfbf-2023a
+
+# 2. Run the script located in your analysis folder
+Rscript analysis/clustering_lcmm.R
