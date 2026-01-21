@@ -23,10 +23,12 @@ Imports:
     readxl,
     ggplot2,
     sjPlot,
+    plotly,
     zoo,
     lme4,
     lmerTest,
     compositions,
     zCompositions,
-    lcmm
+    lcmm,
+    optparse
 RoxygenNote: 7.3.3
