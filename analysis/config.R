@@ -79,11 +79,7 @@ option_list <- list(
     c("--maxiter"), type = "integer",
     default = 200,
     help = "Maximum iterations for optimization. [default= %default]"
-  ),
-  make_option(
-    c("--use_baseline"), type = "logical",
-    default = FALSE, action = "store_true",
-    help = "Use the 1-class model for initialization? [default= %default]")
+  )
 )
 
 opt_parser <- OptionParser(option_list = option_list)

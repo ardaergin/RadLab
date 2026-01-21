@@ -24,34 +24,19 @@ quad_suffix <- if (opt$quadratic) "_quad" else ""
 rand_label  <- if (opt$random == "1") "RI" else "RS"
 
 
-# 3. Handle Baseline Initialization ---------------------------------------
-m_init <- NULL # Default to NULL (Fresh gridsearch)
+# 3. Load Baseline (MANDATORY for gridsearch) -----------------------------
+# lcmm::gridsearch REQUIRES a 1-class model to generate initial values.
+baseline_filename <- paste0("model_", opt$transform, "_", opt$mode, "_", rand_label, "_", opt$controls, quad_suffix, ".rds")
+path_m1 <- here::here("outputs", "models", baseline_filename)
 
-if (opt$use_baseline) {
-
-  baseline_filename <- paste0(
-    "model_",
-    opt$transform, "_",
-    opt$mode, "_",
-    rand_label, "_",
-    opt$controls,
-    quad_suffix,
-    ".rds"
-  )
-
-  path_m1 <- here::here("outputs", "models", baseline_filename)
-
-  if (file.exists(path_m1)) {
-    message("--> Loading baseline model for initialization: ", baseline_filename)
-    m_init <- readRDS(path_m1)
-  } else {
-    stop("\nCRITICAL ERROR: Baseline model not found at: ", path_m1, "\n",
-         "To run without baseline, use: --use_baseline=FALSE")
-  }
-
-} else {
-  message("--> Skipping baseline initialization (Starting fresh gridsearch).")
+if (!file.exists(path_m1)) {
+  stop("\nCRITICAL ERROR: Baseline model not found at: ", path_m1, "\n",
+       "You MUST run the 1-class model (run_model.R) with these exact settings first.\n",
+       "Gridsearch cannot run without a baseline.")
 }
+
+message("--> Loading baseline model: ", baseline_filename)
+m_init <- readRDS(path_m1)
 
 
 # 4. Initialize Cluster ---------------------------------------------------
@@ -80,34 +65,27 @@ message("\n===== Fitting Model with ", opt$nclass, " Classes =====")
 message("  Baseline Init: ", opt$use_baseline)
 message("  Reps:          ", opt$rep)
 
+# We use substitute to strictly inject the variables into the call
 m_call <- substitute(
-  multlcmm(
-    fixed   = final_formula,
-    mixture = mixture_formula,
-    random  = random_formula,
-    subject = "ID",
-    data    = df,
-    link    = links,
-    ng      = K
+  lcmm::gridsearch(
+    m = multlcmm(
+      fixed   = final_formula,
+      mixture = mixture_formula,
+      random  = random_formula,
+      subject = "ID",
+      data    = df,
+      link    = links,
+      ng      = K
+    ),
+    rep     = reps,
+    maxiter = max_it,
+    minit   = m_init, # MANDATORY
+    cl      = cl
   ),
-  list(K = opt$nclass, links = rep(opt$link, n_outcomes))
+  list(K = opt$nclass, links = rep(opt$link, n_outcomes), reps = opt$rep, max_it = opt$maxiter)
 )
 
-# FIX: Build the argument list dynamically
-args_list <- list(
-  m       = m_call,
-  rep     = opt$rep,
-  maxiter = opt$maxiter,
-  cl      = cl
-)
-
-# Only add minit if it is NOT NULL
-if (!is.null(m_init)) {
-  args_list$minit <- m_init
-}
-
-# Run using do.call
-m_k <- do.call(lcmm::gridsearch, args_list)
+m_k <- eval(m_call)
 
 # 7. Save Output ----------------------------------------------------------
 filename <- paste0(
@@ -117,7 +95,7 @@ filename <- paste0(
   rand_label, "_",
   opt$controls,
   quad_suffix,
-  mix_tag,       # <--- Add this to distinguish mixture types
+  mix_tag,
   "_", opt$nclass, "class",
   ".rds"
 )
