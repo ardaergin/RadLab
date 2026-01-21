@@ -80,26 +80,34 @@ message("\n===== Fitting Model with ", opt$nclass, " Classes =====")
 message("  Baseline Init: ", opt$use_baseline)
 message("  Reps:          ", opt$rep)
 
-gs_call <- substitute(
-  lcmm::gridsearch(
-    m = multlcmm(
-      fixed   = final_formula,
-      mixture = mixture_formula,
-      random  = random_formula,
-      subject = "ID",
-      data    = df,
-      link    = rep(opt$link, n_outcomes),
-      ng      = K_classes
-    ),
-    rep     = reps,
-    maxiter = max_it,
-    minit   = m_init, # This handles NULL automatically
-    cl      = cl
+m_call <- substitute(
+  multlcmm(
+    fixed   = final_formula,
+    mixture = mixture_formula,
+    random  = random_formula,
+    subject = "ID",
+    data    = df,
+    link    = links,
+    ng      = K
   ),
-  list(K_classes = opt$nclass, reps = opt$rep, max_it = opt$maxiter)
+  list(K = opt$nclass, links = rep(opt$link, n_outcomes))
 )
 
-m_k <- eval(gs_call)
+# FIX: Build the argument list dynamically
+args_list <- list(
+  m       = m_call,
+  rep     = opt$rep,
+  maxiter = opt$maxiter,
+  cl      = cl
+)
+
+# Only add minit if it is NOT NULL
+if (!is.null(m_init)) {
+  args_list$minit <- m_init
+}
+
+# Run using do.call
+m_k <- do.call(lcmm::gridsearch, args_list)
 
 # 7. Save Output ----------------------------------------------------------
 filename <- paste0(
