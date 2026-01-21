@@ -22,25 +22,38 @@ if (!dir.exists(here("outputs", "models"))) dir.create(here("outputs", "models")
 # 3. Preprocessing --------------------------------------------------------
 message("Preprocessing data...")
 
-# FIX: Dynamic Suffix based on the argument
-suffix <- paste0("_", opt$transform)
-col_ina  <- paste0("ina", suffix)
-col_na   <- paste0("na", suffix)
-col_nna  <- paste0("nna", suffix)
-col_enna <- paste0("enna", suffix)
+if (opt$transform == "sqrt") {
 
+  # Standard suffix logic
+  suffix <- paste0("_", opt$transform)
+  col_ina  <- paste0("ina", suffix)
+  col_na   <- paste0("na", suffix)
+  col_nna  <- paste0("nna", suffix)
+  col_enna <- paste0("enna", suffix)
 
-if (opt$transform=="sqrt"){
   # Inversion (Directionality alignment for lcmm::multlcmm)
   # - 1.0 = High Radicalization (e.g., Low inaction),
   # - 0.0 = Low Radicalization (e.g., High inaction),
   df[[col_ina]] <- 1 - df[[col_ina]]
   df[[col_na]]  <- 1 - df[[col_na]]
+
+  # Define the set of variables for Multivariate mode
+  multivariate_vars <- c(col_ina, col_na, col_nna, col_enna)
+
+} else if (opt$transform == "ilr") {
+
+  # ILR logic: Hardcoded names, 3 dimensions
+  # No inversion needed typically for ILR coordinates
+  multivariate_vars <- c("ilr1", "ilr2", "ilr3")
+
+} else {
+  stop("Unknown transform type: ", opt$transform)
 }
 
 # Check stats
+# We check whatever variables we just decided to use + controls
 vars_to_check <- c(
-  col_ina, col_na, col_nna, col_enna,
+  multivariate_vars,
   "excluded", "injustice", "personal", "violence"
 )
 print(summary(df[, vars_to_check]))
@@ -61,6 +74,7 @@ message("Setup Complete.")
 message("N experiments: ", length(unique(df$experiment)))
 message("N participants: ", length(unique(df$ID)))
 
+
 # 4. Define Formulas ------------------------------------------------------
 
 # A. Determine Outcomes
@@ -69,10 +83,15 @@ if (opt$mode == "univariate") {
     stop("Invalid mode: ILR does not support univariate ENNA test.")
   }
   message("-> Mode: UNIVARIATE (sqrt)")
-  outcomes <- col_enna
+  # Univariate always targets ENNA in your workflow
+  outcome_vars <- "enna_sqrt"
+  outcomes_str <- outcome_vars
+
 } else if (opt$mode == "multivariate") {
   message("-> Mode: MULTIVARIATE")
-  outcomes <- paste(col_ina, col_na, col_nna, col_enna, sep = " + ")
+  outcome_vars <- multivariate_vars
+  outcomes_str <- paste(outcome_vars, collapse = " + ")
+
 } else {
   stop("Invalid mode: ", opt$mode)
 }
@@ -94,10 +113,10 @@ if (opt$controls == "none") {
 }
 
 # D. Create Final Formula
-final_formula <- as.formula(paste(outcomes, "~", rhs))
+final_formula <- as.formula(paste(outcomes_str, "~", rhs))
 
 # E. Derive Internal Parameters
-n_outcomes <- if (opt$mode == "multivariate") 4 else 1
+n_outcomes <- length(outcome_vars)
 
 # F. Define Random Formula safely
 if (opt$random == "1") {
