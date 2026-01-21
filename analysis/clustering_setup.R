@@ -62,10 +62,12 @@ if (setting == 1) {
   message("Running in UNIVARIATE mode (enna_sqrt only)")
   outcomes <- "enna_sqrt"
   n_outcomes <- 1
+  link_type <- "5-equi-splines"
 } else if (setting == 2) {
   message("Running in MULTIVARIATE mode (All 4 DVs)")
   outcomes <- "ina_sqrt + na_sqrt + nna_sqrt + enna_sqrt"
   n_outcomes <- 4
+  link_type <- "linear" # simpler (for now)
 } else {
   stop("Invalid setting provided. Use 1 for Univariate or 2 for Multivariate.")
 }

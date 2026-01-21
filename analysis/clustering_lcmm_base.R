@@ -13,7 +13,7 @@ message("\nRunning Model Set A: Hellinger, Univariate (ENNA)...")
 message("Fitting A1 (Base, RI)...")
 m_a1 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_base, random = ~ 1, ng = 1
 )
 saveRDS(m_a1, here("outputs", "models", "m_a1_base_RI.rds"))
@@ -27,7 +27,7 @@ message("\n===== End of Summary for Model A1 =====\n")
 message("Fitting A2 (Base, RI + RS)...")
 m_a2 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_base, random = ~ time, ng = 1
 )
 saveRDS(m_a2, here("outputs", "models", "m_a2_base_RS.rds"))
@@ -43,7 +43,7 @@ message("\n===== End of Summary for Model A2 =====\n")
 message("Fitting A3 (Scenario Controls)...")
 m_a3 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_scenario_controls, random = ~ time, ng = 1
 )
 saveRDS(m_a3, here("outputs", "models", "m_a3_scenario_controls.rds"))
@@ -57,7 +57,7 @@ message("\n===== End of Summary for Model A3 =====\n")
 message("Fitting A4 (Experiment Controls)...")
 m_a4 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_experiment_control, random = ~ time, ng = 1
 )
 saveRDS(m_a4, here("outputs", "models", "m_a4_experiment_controls.rds"))
@@ -71,7 +71,7 @@ message("\n===== End of Summary for Model A4 =====\n")
 message("Fitting A5 (Full Controls)...")
 m_a5 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_all_controls, random = ~ time, ng = 1,
   maxiter = 500 # this specific model did not converge with maxiter=100
   # So, just for the sake of being able to compare it with other models,
@@ -90,7 +90,7 @@ message("\n===== End of Summary for Model A5 =====\n")
 message("Fitting A6 (Full Controls + Quadratic)...")
 m_a6 <- lcmm::multlcmm(
   data = model_data, subject = "ID",
-  link = rep("5-equi-splines", n_outcomes),
+  link = rep(link_type, n_outcomes),
   fixed = formula_all_controls_quad, random = ~ time, ng = 1
 )
 saveRDS(m_a6, here("outputs", "models", "m_a5_all_controls_quad.rds"))
