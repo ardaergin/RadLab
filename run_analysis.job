@@ -2,7 +2,7 @@
 #SBATCH --job-name=RadLab
 #SBATCH --output=outputs/logs/%j_oneclass.txt
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=16G
 #SBATCH --time=08:00:00
 #SBATCH --partition=genoa
