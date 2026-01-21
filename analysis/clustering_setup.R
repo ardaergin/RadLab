@@ -44,7 +44,7 @@ if (opt$transform == "sqrt") {
 
   # ILR logic: Hardcoded names, 3 dimensions
   # No inversion needed typically for ILR coordinates
-  multivariate_vars <- c("ilr_1", "ilr_2", "ilr_3")
+  multivariate_vars <- paste0("ilr_", opt$basis, "_", 1:3)
 
 } else {
   stop("Unknown transform type: ", opt$transform)

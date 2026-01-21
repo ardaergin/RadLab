@@ -18,6 +18,12 @@ option_list <- list(
     help = "Transformation to use: 'sqrt' or 'ilr'. [default= %default]"
   ),
 
+  make_option(
+    c("--basis"), type = "character",
+    default = "theory",
+    help = "For ILR transform only: 'theory' or 'empirical'. [default= %default]"
+  ),
+
   # --- Model Settings ---
   make_option(
     c("-m", "--mode"), type = "character",
