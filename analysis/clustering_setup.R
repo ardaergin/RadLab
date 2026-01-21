@@ -27,15 +27,8 @@ model_data <- df_raw %>%
     excluded, injustice, personal, violence
   ) %>%
   mutate(
-    # 1. Scale Sqrt variables to 0-1 range (Divide by 10)
-    # Original sqrt range is 0-10. New range is 0-1.
-    ina_sqrt  = ina_sqrt / 10,
-    na_sqrt   = na_sqrt / 10,
-    nna_sqrt  = nna_sqrt / 10,
-    enna_sqrt = enna_sqrt / 10,
-
-    # 2. Inversion (Directionality Alignment)
-    # Max value is now 1. So we subtract from 1.
+    # Inversion (Directionality alignment for lcmm::multlcmm)
+    # Max value is 1. So we subtract from 1.
     # Result: 1.0 = High Radicalization (Low Inaction), 0.0 = Low Radicalization
     ina_sqrt = 1 - ina_sqrt,
     na_sqrt  = 1 - na_sqrt,
