@@ -14,7 +14,7 @@ Sys.setenv(
 
 
 # 1. Setup & Config -------------------------------------------------------
-source("analysis_setup.R")
+source("analysis/clustering_setup.R")
 library(parallel)
 
 

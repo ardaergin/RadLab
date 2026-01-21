@@ -1,6 +1,6 @@
 
 # 1. Setup & Config -------------------------------------------------------
-source("config.R")
+source("analysis/config.R")
 
 message("Loading analysis packages...")
 library(dplyr)

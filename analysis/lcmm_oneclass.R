@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # 1. Setup & Config -------------------------------------------------------
-source("analysis_setup.R")
+source("analysis/clustering_setup.R")
 
 # 2. Run Model ------------------------------------------------------------
 # We can use tryCatch so the script doesn't crash hard if convergence fails
