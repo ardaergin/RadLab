@@ -1,18 +1,20 @@
 
-# 1. Setup ----------------------------------------------------------------
-message("Loading packages...")
-library(here)
+# 1. Setup & Config -------------------------------------------------------
+source("config.R")
+
+message("Loading analysis packages...")
 library(dplyr)
 library(lcmm)
+library(here)
+
 
 # 2. Load Data ------------------------------------------------------------
-data_path <- here("data", "experiments_with_transforms.rds")
-
-if (!file.exists(data_path)) {
-  stop("Data file not found at: ", data_path)
+file_path <- here::here("data", opt$file)
+if (!file.exists(file_path)) {
+  stop("Data file not found at: ", file_path)
 }
-message("Reading data from: ", data_path)
-df_raw <- readRDS(data_path)
+message("Reading data from: ", file_path)
+df <- readRDS(file_path)
 
 # Ensure models folder exist (to save the outputs)
 if (!dir.exists(here("outputs", "models"))) dir.create(here("outputs", "models"), recursive = TRUE)
@@ -20,79 +22,99 @@ if (!dir.exists(here("outputs", "models"))) dir.create(here("outputs", "models")
 # 3. Preprocessing --------------------------------------------------------
 message("Preprocessing data...")
 
-model_data <- df_raw %>%
-  dplyr::select(
-    ID, time, experiment,
-    ina_sqrt, na_sqrt, nna_sqrt, enna_sqrt,
-    excluded, injustice, personal, violence
-  ) %>%
-  mutate(
-    # Inversion (Directionality alignment for lcmm::multlcmm)
-    # Max value is 1. So we subtract from 1.
-    # Result: 1.0 = High Radicalization (Low Inaction), 0.0 = Low Radicalization
-    ina_sqrt = 1 - ina_sqrt,
-    na_sqrt  = 1 - na_sqrt,
+# FIX: Dynamic Suffix based on the argument
+suffix <- paste0("_", opt$transform)
+col_ina  <- paste0("ina", suffix)
+col_na   <- paste0("na", suffix)
+col_nna  <- paste0("nna", suffix)
+col_enna <- paste0("enna", suffix)
 
+
+if (opt$transform=="sqrt"){
+  # Inversion (Directionality alignment for lcmm::multlcmm)
+  # - 1.0 = High Radicalization (e.g., Low inaction),
+  # - 0.0 = Low Radicalization (e.g., High inaction),
+  df[[col_ina]] <- 1 - df[[col_ina]]
+  df[[col_na]]  <- 1 - df[[col_na]]
+}
+
+# Check stats
+vars_to_check <- c(
+  col_ina, col_na, col_nna, col_enna,
+  "excluded", "injustice", "personal", "violence"
+)
+print(summary(df[, vars_to_check]))
+
+# Ensuring variable type
+df <- df %>%
+  mutate(
     ID = as.numeric(as.factor(ID)),
     time = as.numeric(as.factor(time)),
     experiment = as.factor(experiment)
   )
 
-# Check stats after the changes
-vars_to_check <- c("ina_sqrt", "na_sqrt", "nna_sqrt", "enna_sqrt",
-                   "excluded", "injustice", "personal", "violence")
-print(summary(model_data[, vars_to_check]))
-
 # Normalize time
-model_data$time <- model_data$time / max(model_data$time)
+df$time <- df$time / max(df$time)
 
-# Checks:
+# Overall Checks
 message("Setup Complete.")
-message("N experiments: ", length(unique(model_data$experiment)))
-message("N participants: ", length(unique(model_data$ID)))
+message("N experiments: ", length(unique(df$experiment)))
+message("N participants: ", length(unique(df$ID)))
 
 # 4. Define Formulas ------------------------------------------------------
 
-# Get Command Line Arguments
-args <- commandArgs(trailingOnly = TRUE)
-# Default to setting 1 (Multivariate) if no argument is passed
-setting <- if(length(args) > 0) as.numeric(args[1]) else 2
-
-if (setting == 1) {
-  message("Running in UNIVARIATE mode (enna_sqrt only)")
-  outcomes <- "enna_sqrt"
-  n_outcomes <- 1
-  link_type <- "5-equi-splines"
-} else if (setting == 2) {
-  message("Running in MULTIVARIATE mode (All 4 DVs)")
-  outcomes <- "ina_sqrt + na_sqrt + nna_sqrt + enna_sqrt"
-  n_outcomes <- 4
-  link_type <- "linear" # simpler (for now)
+# A. Determine Outcomes
+if (opt$mode == "univariate") {
+  if (opt$transform == "ilr") {
+    stop("Invalid mode: ILR does not support univariate ENNA test.")
+  }
+  message("-> Mode: UNIVARIATE (sqrt)")
+  outcomes <- col_enna
+} else if (opt$mode == "multivariate") {
+  message("-> Mode: MULTIVARIATE")
+  outcomes <- paste(col_ina, col_na, col_nna, col_enna, sep = " + ")
 } else {
-  stop("Invalid setting provided. Use 1 for Univariate or 2 for Multivariate.")
+  stop("Invalid mode: ", opt$mode)
 }
 
-# Base: Just time
-formula_base <- as.formula(paste(
-  outcomes, "~ time"
-))
+# B. Determine Time Structure
+time_term <- if(opt$quadratic) "time + I(time^2)" else "time"
 
-# 1: Scenario-controls only (psychological factors)
-formula_scenario_controls <- as.formula(paste0(
-  outcomes, " ~ time + excluded + injustice + personal + violence"
-))
+# C. Determine Controls
+if (opt$controls == "none") {
+  rhs <- time_term
+} else if (opt$controls == "scenario") {
+  rhs <- paste(time_term, "+ excluded + injustice + personal + violence")
+} else if (opt$controls == "experiment") {
+  rhs <- paste(time_term, "+ experiment")
+} else if (opt$controls == "all") {
+  rhs <- paste(time_term, "+ experiment + excluded + injustice + personal + violence")
+} else {
+  stop("Invalid controls setting: ", opt$controls)
+}
 
-# 2: Experiment-control only (contextual factor)
-formula_experiment_control <- as.formula(paste0(
-  outcomes, " ~ time + experiment"
-))
+# D. Create Final Formula
+final_formula <- as.formula(paste(outcomes, "~", rhs))
 
-# 3: Full Model (all controls)
-formula_all_controls <- as.formula(paste0(
-  outcomes, " ~ time + experiment + excluded + injustice + personal + violence"
-))
+# E. Derive Internal Parameters
+n_outcomes <- if (opt$mode == "multivariate") 4 else 1
 
-# 4: Quadratic formula
-formula_all_controls_quad <- as.formula(paste0(
-  outcomes, " ~ time + I(time^2) + experiment + excluded + injustice + personal + violence"
-))
+# F. Define Random Formula safely
+if (opt$random == "1") {
+  random_formula <- ~1
+  rand_label <- "RI" # For filename (Random Intercept)
+} else {
+  random_formula <- ~time
+  rand_label <- "RS" # For filename (Random Slope)
+}
+
+message("------------------------------------------------")
+message("CONFIGURATION:")
+message("  Mode: ", opt$mode)
+message("  Link: ", opt$link)
+message("  Controls: ", opt$controls)
+message("  Quadratic: ", opt$quadratic)
+message("FORMULA:")
+message("  Fixed Effects:  ", format(final_formula))
+message("  Random Effects: ", format(random_formula))
+message("------------------------------------------------")

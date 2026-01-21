@@ -1,15 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=RadLab
-#SBATCH --output=outputs/logs/%x_%j.txt #
+#SBATCH --output=outputs/logs/%j_oneclass.txt
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --time=02:00:00
+#SBATCH --time=08:00:00
 #SBATCH --partition=genoa
 
 module load 2023
 module load R/4.3.2-gfbf-2023a
 
-# Run the script passed as the first argument ($1)
-echo "Running script: $1 with analysis-setting: $2"
-Rscript $1 $2
+echo "Running R script with arguments: $@"
+Rscript analysis/lcmm_oneclass.R "$@"
