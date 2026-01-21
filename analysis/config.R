@@ -39,7 +39,7 @@ option_list <- list(
 
   make_option(
     c("-r", "--random"), type = "character",
-    default = "1",
+    default = "time",
     help = "Random effect: '1' (Intercept only) or 'time' (Intercept + Slope). [default= %default]"
   ),
 
