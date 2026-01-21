@@ -51,10 +51,10 @@ main_df$enna_prop <- main_df$enna / 100
 ```{r}
 # Theory
 custom_basis_theory <- matrix(c(
-  0.8660254, 0.0000000, 0.0000000,    # inaction
-  -0.2886751, 0.8164966, 0.0000000,   # normative
-  -0.2886751, -0.4082483, 0.7071068,  # non-normative
-  -0.2886751, -0.4082483, -0.7071068  # extreme non-normative
+  -0.8660254,  0.0000000,  0.0000000,    # inaction
+   0.2886751, -0.8164966,  0.0000000,   # normative
+   0.2886751,  0.4082483, -0.7071068,  # non-normative
+   0.2886751,  0.4082483,  0.7071068  # extreme non-normative
 ),
 nrow = 4, ncol = 3, byrow = TRUE,
 dimnames = list(
@@ -66,10 +66,10 @@ dimnames = list(
 # Empirical
 custom_basis_empirical <- matrix(
   c(
-    0.5,   1/sqrt(2),      0,          # inaction
-    0.5,  -1/sqrt(2),      0,          # normative
-   -0.5,       0,       1/sqrt(2),     # non-normative
-   -0.5,       0,      -1/sqrt(2)      # extreme non-normative
+  -0.5,  -1/sqrt(2),      0,          # inaction
+  -0.5,   1/sqrt(2),      0,          # normative
+   0.5,       0,      -1/sqrt(2),     # non-normative
+   0.5,       0,       1/sqrt(2)      # extreme non-normative
   ),
   nrow = 4, ncol = 3, byrow = TRUE,
   dimnames = list(
