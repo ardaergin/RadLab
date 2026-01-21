@@ -65,28 +65,21 @@ formula_base <- as.formula(paste(
 ))
 
 # 1: Scenario-controls only (psychological factors)
-formula_scenario_controls <- as.formula(paste(
-  outcomes, "~ time +
-  excluded + injustice + personal + violence"
+formula_scenario_controls <- as.formula(paste0(
+  outcomes, " ~ time + excluded + injustice + personal + violence"
 ))
 
 # 2: Experiment-control only (contextual factor)
-formula_experiment_control <- as.formula(paste(
-  outcomes, "~ time
-  + experiment"
+formula_experiment_control <- as.formula(paste0(
+  outcomes, " ~ time + experiment"
 ))
 
 # 3: Full Model (all controls)
-formula_all_controls <- as.formula(paste(
-  outcomes, "~ time
-  + experiment
-  + excluded + injustice + personal + violence"
+formula_all_controls <- as.formula(paste0(
+  outcomes, " ~ time + experiment + excluded + injustice + personal + violence"
 ))
 
 # 4: Quadratic formula
-formula_all_controls_quad <- as.formula(paste(
-  outcomes, "~ time
-  + I(time^2)
-  + experiment
-  + excluded + injustice + personal + violence"
+formula_all_controls_quad <- as.formula(paste0(
+  outcomes, " ~ time + I(time^2) + experiment + excluded + injustice + personal + violence"
 ))
