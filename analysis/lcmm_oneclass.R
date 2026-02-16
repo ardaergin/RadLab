@@ -13,7 +13,7 @@ m <- tryCatch({
     fixed = final_formula,
     random = random_formula,
     ng = 1,
-    maxiter = 200
+    maxiter = opt$maxiter
   )
 }, error = function(e) {
   message("Error in model fitting: ", e$message)
