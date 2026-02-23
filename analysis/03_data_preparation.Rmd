@@ -1,0 +1,467 @@
+---
+title: "Radicalization Lab"
+subtitle: "Code sheet 3: Data Preparation"
+author: "Arda Ergin"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+---
+
+# Setup
+```{r, message=FALSE, warning=FALSE}
+devtools::load_all(here::here())
+library(here)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(compositions)
+library(zCompositions)
+library(knitr)
+```
+
+```{r}
+df <- readRDS(
+  here::here("data", "experiments_merged.rds")
+)
+cat("Loaded data with", nrow(df), "observations.")
+```
+
+
+
+# Exploratory Data Analysis
+
+## Check: NAs
+```{r}
+# Numerical Check for Missing Values
+cat("=== Missing Values (NAs) ===\n")
+cols_to_check <- c("ina", "na", "nna", "enna")
+
+cat("Count:\n")
+colSums(is.na(df[cols_to_check]))
+
+cat("Proportions:\n")
+colMeans(is.na(df[cols_to_check]))
+
+# Verification: The columns must not have NAs for CoDA
+if(any(is.na(df[cols_to_check]))) {
+  warning("STOP: You have NAs in your compositional columns. You must impute or remove them before proceeding.")
+} else {
+  cat("\nCheck passed: No NAs found in compositional columns.\n")
+}
+```
+
+
+## Check: Zeros
+```{r}
+# Numerical Check
+cat("=== Zeros ===\n")
+cat("Count:\n")
+cols_to_check <- c("ina", "na", "nna", "enna")
+colSums(df[cols_to_check] == 0, na.rm = TRUE)
+cat("Proportions:\n")
+colMeans(df[cols_to_check] == 0, na.rm = TRUE)
+```
+
+```{r}
+# Visual Check
+comp_cols <- df[, c("ina", "na", "nna", "enna")]
+
+# label = 0 tells it what value to treat as zero
+zCompositions::zPatterns(comp_cols, label = 0)
+```
+
+**Interpretation of the pattern table above**:
+- There are $15$ possible scenarios present on missingness. Since we have $4$ variables, there are $2^4 = 16$ theoretically possible patterns. Since we are seeing $15$, it means 1 pattern, likely the "all zeros" pattern, is missing, which makes sense because participants must allocate points somewhere.
+- In the plot/table, a *colored cell* (or "-" in the text output) means **a Non-Zero value** (they allocated points), and a *blue cell* (or "+" in text) means **a Zero** (they ignored that option). E.g., ("0", "no 0", "no 0", "no 0") means "ina is zero, but others are non-zero".
+- The horizontal bars on the right show how many participants fall into that specific "Row" (Pattern). The longer the bar, the more common that behavior is.
+- The vertical bars at the very top of the grid show the total count of zeros for each column (ina, na, etc.) independently.
+
+
+## Check: Pairwise zeros & equality
+In the ILR transformation, $0$ represents both double-zero as well as both of them having the same value (e.g., a participants assign 20 to NNA and 20 to ENNA). The model can't tell the difference between someone who gave 50 points to both (very radical) and someone who gave 0 to both (not radical at all). So it is good to check these cases.
+
+```{r}
+# 1. Get all unique pairwise combinations
+vars <- c("ina", "na", "nna", "enna")
+pairs <- combn(vars, 2, simplify = FALSE)
+
+# 2. Iterate through pairs and calculate stats
+pairwise_stats <- lapply(pairs, function(p) {
+  v1 <- p[1]
+  v2 <- p[2]
+  
+  df %>%
+    summarise(
+      Comparison = paste0(v1, " vs ", v2),
+      Total_N = n(),
+      Both_Zero_N = sum(get(v1) == 0 & get(v2) == 0),
+      Both_Zero_Pct = (Both_Zero_N / Total_N) * 100,
+      # Only check equality for cases where they AREN'T both zero
+      Equal_NonZero_N = sum(get(v1) == get(v2) & get(v1) > 0),
+      Equal_NonZero_Pct = (Equal_NonZero_N / Total_N) * 100
+    )
+}) %>%
+  bind_rows()
+
+# 3. Display the Table
+kable(pairwise_stats, 
+      digits = 2, 
+      col.names = c("Pairwise Comparison", "Total N", "Both Zero (N)", "Both Zero (%)", "Equal Non-Zero (N)", "Equal Non-Zero (%)"),
+      caption = "Table: Pairwise comparisons for 1) Both Zero 2) Both Non-Zero but Equal")
+```
+
+
+## Plot: Distributions
+```{r, fig.width=8, fig.height=12}
+RadLab::plot_stacked_distributions(
+  data     = df,
+  cols     = c("ina", "na", "nna", "enna"),
+  labels   = c("Inaction", "Normative Action", "Non-Normative Action", "Extreme Non-Normative Action"),
+  colors   = c("#475569", "#1e40af", "#d97706", "#991b1b"),
+  title    = "Distribution of Allocated Points",
+  xlab     = "Points Allocated (0-100)",
+  x_breaks = seq(0, 100, 10),
+  x_limits = c(0, 100)
+)
+```
+
+
+## Plot: Distributions without 0 and 100
+```{r, fig.width=8, fig.height=12}
+RadLab::plot_stacked_distributions(
+  data     = df,
+  cols     = c("ina", "na", "nna", "enna"),
+  labels   = c("Inaction", "Normative Action", "Non-Normative Action", "Extreme Non-Normative Action"),
+  colors   = c("#475569", "#1e40af", "#d97706", "#991b1b"),
+  title    = "Distribution of Allocated Points",
+  subtitle = "Excluding 0 and 100", # <---
+  xlab     = "Points Allocated (0-100)",
+  x_breaks = seq(0, 100, 10),
+  x_limits = c(0, 100),
+  exclude_values = c(0, 100) # <---
+)
+```
+
+
+# CoDA Transformations
+
+## CZM + ILR
+
+### Apply Zero Replacement
+```{r}
+comp_counts <- as.matrix(
+  df[, c("ina","na","nna","enna")]
+)
+
+comp_counts_nozeros <- zCompositions::cmultRepl(
+  comp_counts,
+  method = "CZM",
+  output = "prop",
+  label = 0,
+  threshold = 0.5,
+  frac = 0.65,
+  z.delete = FALSE
+)
+```
+
+
+### Define Basis Matrices
+```{r}
+# A:
+## ILR_1: INA vs. (NA + NNA + ENNA)
+## ILR_2: NA vs. (NNA + ENNA)
+## ILR_2: NNA vs. ENNA
+custom_basis_A <- matrix(c(
+  -0.8660254,  0.0000000,  0.0000000,    # inaction
+   0.2886751, -0.8164966,  0.0000000,    # normative
+   0.2886751,  0.4082483, -0.7071068,    # non-normative
+   0.2886751,  0.4082483,  0.7071068     # extreme non-normative
+),
+nrow = 4, ncol = 3, byrow = TRUE,
+dimnames = list(
+  c("ina","na","nna","enna"),
+  c("b1","b2","b3")
+  )
+)
+
+# A:
+# ILR_1: ENNA vs (INA + NA + NNA)
+# ILR_2: NNA vs (INA + NA)
+# ILR_2: NA vs INA
+custom_basis_B <- matrix(c(
+  -0.2886751, -0.4082483, -0.7071068,  # inaction
+  -0.2886751, -0.4082483,  0.7071068,  # normative
+  -0.2886751,  0.8164966,  0.0000000,  # non-normative
+   0.8660254,  0.0000000,  0.0000000   # extreme non-normative
+), nrow = 4, ncol = 3, byrow = TRUE,
+dimnames = list(
+  c("ina","na","nna","enna"), 
+  c("b1","b2","b3")
+  )
+)
+
+custom_basis_matrices <- list(
+  A = custom_basis_A, 
+  B = custom_basis_B
+)
+```
+
+
+### ILR Transformation
+```{r}
+# Create acomp object
+acomp_obj <- compositions::acomp(comp_counts_nozeros)
+
+# 4. Loop through bases matrices and append ILR coordinates
+for (basis_name in names(custom_basis_matrices)) {
+  # Perform ILR
+  V <- custom_basis_matrices[[basis_name]]
+  ilr_mat <- compositions::ilr(acomp_obj, V = V)
+  ilr_df  <- as.data.frame(ilr_mat)
+  
+  # Rename columns (e.g., ilr_theory_1, ilr_theory_2...)
+  colnames(ilr_df) <- paste0(
+    "ilr_", basis_name, "_", 1:ncol(ilr_df)
+  )
+  
+  # Bind to df
+  df <- cbind(df, ilr_df)
+  
+  cat(paste("Calculated ILR coords for the basis matrix:", basis_name, "\n"))
+}
+```
+
+
+
+### Check: NAs
+```{r}
+# Identify the new ILR columns we just created
+ilr_cols <- grep("^ilr_", names(df), value = TRUE)
+
+cat("=== Missing Values (NAs) in ILR Coordinates ===\n")
+
+cat("Count:\n")
+colSums(is.na(df[ilr_cols]))
+
+cat("Proportions:\n")
+colMeans(is.na(df[ilr_cols]))
+
+# Verification
+if(any(is.na(df[ilr_cols]))) {
+  warning("STOP: You have NAs in your ILR coordinates. This usually happens if a row had all zeros even after CZM, or if the basis matrix is singular.")
+} else {
+  cat("\nCheck passed: No NAs found in ILR coordinates.\n")
+}
+```
+
+
+
+### ILR visualizations
+#### Plot: Aitchison Variation Matrix
+```{r}
+# Compute the variation matrix
+var_mat <- compositions::variation(acomp_obj)
+
+# Pretty‐print and heatmap
+kable(round(var_mat, 3), caption = "Aitchison Variation Matrix")
+stats::heatmap(var_mat, symm=TRUE, main="Aitchison Variation")
+```
+
+#### Plot: PCA & Biplot
+```{r}
+# Compute CLR (centered log‐ratio)
+clr_df <- as.data.frame(clr(acomp_obj))
+
+# PCA
+p <- stats::prcomp(clr_df, scale.=FALSE)
+
+# Biplot
+stats::biplot(p, xlabs=rep(".", nrow(clr_df)), main="CLR‐PCA Biplot")
+```
+
+#### Plot: Distribution
+```{r, fig.width=8, fig.height=12}
+# Quick range check for ILR variables
+ilr_range_check <- df %>%
+  dplyr::select(starts_with("ilr_")) %>%
+  summarise(across(everything(), list(min = min, max = max)))
+print(ilr_range_check)
+```
+
+```{r, fig.width=8, fig.height=8}
+for (basis_name in names(custom_basis_matrices)) {
+  plot <- plot_stacked_distributions(
+    data           = df,
+    cols           = paste0("ilr_", basis_name, "_", 1:3),
+    labels         = c("ILR 1", "ILR 2", "ILR 3"),
+    colors         = c("#8e44ad", "#2c3e50", "#16a085"),
+    title          = "Distribution of ILR Coordinates",
+    subtitle       = paste("Basis Matrix:", basis_name),
+    xlab           = "ILR Value (Log-Ratio)",
+    x_breaks       = seq(-5, 5, 1),
+    x_limits       = c(-5, 5),
+    show_zero_line = TRUE,
+    bins           = 100
+  )
+  print(plot)
+}
+```
+
+
+## Hellinger
+```{r}
+df$ina_hellinger  <- sqrt(df$ina / 100)
+df$na_hellinger   <- sqrt(df$na / 100)
+df$nna_hellinger  <- sqrt(df$nna / 100)
+df$enna_hellinger <- sqrt(df$enna / 100)
+
+# Verify creation
+head(df[, c("ina_hellinger", "na_hellinger", "nna_hellinger", "enna_hellinger")])
+```
+
+### Plot: Distributions
+```{r, fig.width=8, fig.height=12}
+plot_stacked_distributions(
+  data     = df,
+  cols     = c("ina_hellinger", "na_hellinger", "nna_hellinger", "enna_hellinger"),
+  labels   = c("Inaction", "Normative Action", "Non-Normative Action", "Extreme Non-Normative Action"),
+  colors   = c("#475569", "#1e40af", "#d97706", "#991b1b"),
+  title    = "Distribution of Hellinger-Transformed Allocations",
+  xlab     = "Hellinger Value (0-1)",
+  x_breaks = seq(0, 1, 0.1),
+  x_limits = c(0, 1)
+)
+```
+
+### (!) Inversion
+Inversion (Directionality alignment for lcmm::multlcmm)
+- 1.0 = High Radicalization (e.g., Low inaction),
+- 0.0 = Low Radicalization (e.g., High inaction),
+```{r}
+df$ina_hellinger_inv <- 1 - df$ina_hellinger
+df$na_hellinger_inv  <- 1 - df$na_hellinger
+```
+
+
+## Checking everything
+```{r}
+# 1. Identify all transformed columns (ILR and Hellinger)
+vars_to_verify <- grep("ilr_|hellinger", names(df), value = TRUE)
+
+cat("=== Post-Transformation Validity Check ===\n")
+
+# 2. Create the summary table
+# We use vars_to_verify for both the rows and the data selection
+validity_summary <- data.frame(
+  Variable = vars_to_verify,
+  NAs      = sapply(df[vars_to_verify], function(x) sum(is.na(x))),
+  NaNs     = sapply(df[vars_to_verify], function(x) sum(is.nan(x))),
+  Infs     = sapply(df[vars_to_verify], function(x) sum(is.infinite(x)))
+)
+
+# 3. Print the results
+print(validity_summary)
+
+# 4. Final Verdict
+total_issues <- sum(validity_summary[, c("NAs", "NaNs", "Infs")])
+
+if(total_issues > 0) {
+  warning("STOP: Detected ", total_issues, " invalid values in transformed variables.")
+} else {
+  cat("\nCheck passed: All transformed variables are finite and complete.\n")
+}
+```
+
+
+
+
+
+# Other variables
+
+## Time
+
+```{r}
+df %>%
+  group_by(experiment) %>%
+  summarise(Tmax = max(time, na.rm=TRUE), .groups="drop") %>%
+  arrange(Tmax)
+```
+
+```{r}
+# Relative time (per experiment)
+df <- df %>%
+  group_by(experiment) %>%
+  mutate(
+    time_min_exp = min(time, na.rm = TRUE),
+    time_max_exp = max(time, na.rm = TRUE),
+    time_relative = ifelse(
+      time_max_exp == time_min_exp,
+      0,  # edge case: only 1 timepoint in an experiment
+      (time - time_min_exp) / (time_max_exp - time_min_exp)
+    )
+  ) %>%
+  ungroup() %>%
+  dplyr::select(-time_min_exp, -time_max_exp)
+hist(df$time_relative)
+```
+
+
+```{r}
+# 1) Centered (units = "scenario steps")
+time_mean <- mean(df$time, na.rm = TRUE)
+df$time_c <- df$time - time_mean
+
+# 2) Centered + scaled (units = SD of scenario steps)
+time_sd <- sd(df$time, na.rm = TRUE)
+df$time_z <- (df$time - time_mean) / time_sd
+
+# 3) MinMax normalization
+## This is apparently bad, but doing it here just to check out the correlation below
+df$time_minmax <- df$time / max(df$time)
+```
+
+
+```{r}
+# Checks
+## Original
+cat("cor(time, time^2) =", cor(df$time, df$time^2), "\n")
+
+## MinMax
+cat("cor(time_minmax, time_minmax^2) =", cor(df$time_minmax, df$time_minmax^2), "\n")
+
+## Center / Centered + scaled
+cat("cor(time_c, time_c^2) =", cor(df$time_c, df$time_c^2), "\n")
+cat("cor(time_z, time_z^2) =", cor(df$time_z, df$time_z^2), "\n")
+
+## Relative
+cat("cor(time_relative, time) =", cor(df$time_relative, df$time), "\n")
+cat("cor(time_relative, time_relative^2) =", cor(df$time_relative, df$time_relative^2), "\n")
+cat("cor(time_relative, time_z) =", cor(df$time_relative, df$time_z), "\n")
+cat("cor(time_relative, time_c) =", cor(df$time_relative, df$time_c), "\n")
+```
+
+
+## Ensure type
+```{r}
+df <- df %>%
+  mutate(
+    # Time
+    time       = as.numeric(time),
+    time_c     = as.numeric(time_c),
+    time_z     = as.numeric(time_z),
+    time_minmax= as.numeric(time_minmax),
+    time_relative = as.numeric(time_relative),
+    # Others
+    ID         = as.integer(as.factor(ID)),
+    experiment = as.factor(experiment)
+  )
+```
+
+# Save
+```{r}
+saveRDS(df, file = here::here(
+  "data", "experiments_processed.rds")
+)
+cat("Saved transformed data to data/experiments_analysis.rds")
+```
+

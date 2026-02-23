@@ -1,3 +1,4 @@
+# analysis/clustering_setup.R
 
 # 1. Setup & Config -------------------------------------------------------
 source("analysis/config.R")
@@ -22,54 +23,26 @@ if (!dir.exists(here("outputs", "models"))) dir.create(here("outputs", "models")
 # 3. Preprocessing --------------------------------------------------------
 message("Preprocessing data...")
 
-if (opt$transform == "sqrt") {
-
-  # Standard suffix logic
-  suffix <- paste0("_", opt$transform)
-  col_ina  <- paste0("ina", suffix)
-  col_na   <- paste0("na", suffix)
-  col_nna  <- paste0("nna", suffix)
-  col_enna <- paste0("enna", suffix)
-
-  # Inversion (Directionality alignment for lcmm::multlcmm)
-  # - 1.0 = High Radicalization (e.g., Low inaction),
-  # - 0.0 = Low Radicalization (e.g., High inaction),
-  df[[col_ina]] <- 1 - df[[col_ina]]
-  df[[col_na]]  <- 1 - df[[col_na]]
-
-  # Define the set of variables for Multivariate mode
-  multivariate_vars <- c(col_ina, col_na, col_nna, col_enna)
-
+if (opt$transform == "hellinger") {
+  multivariate_vars <- c(
+    "ina_hellinger_inv",
+    "na_hellinger_inv",
+    "nna_hellinger",
+    "enna_hellinger"
+  )
 } else if (opt$transform == "ilr") {
-
-  # ILR logic: Hardcoded names, 3 dimensions
-  # No inversion needed typically for ILR coordinates
-  multivariate_vars <- paste0("ilr_", opt$basis, "_", 1:3)
-
+  multivariate_vars <- paste0("ilr", "_", opt$basis, "_", 1:3)
 } else {
   stop("Unknown transform type: ", opt$transform)
 }
 
-# Check stats
-# We check whatever variables we just decided to use + controls
+# Check variables
 vars_to_check <- c(
   multivariate_vars,
   "excluded", "injustice", "personal", "violence"
 )
 print(summary(df[, vars_to_check]))
 
-# Ensuring variable type
-df <- df %>%
-  mutate(
-    ID = as.numeric(as.factor(ID)),
-    time = as.numeric(as.factor(time)),
-    experiment = as.factor(experiment)
-  )
-
-# Normalize time
-df$time <- df$time / max(df$time)
-
-# Overall Checks
 message("Setup Complete.")
 message("N experiments: ", length(unique(df$experiment)))
 message("N participants: ", length(unique(df$ID)))
@@ -82,9 +55,9 @@ if (opt$mode == "univariate") {
   if (opt$transform == "ilr") {
     stop("Invalid mode: ILR does not support univariate ENNA test.")
   }
-  message("-> Mode: UNIVARIATE (sqrt)")
+  message("-> Mode: UNIVARIATE (hellinger)")
   # Univariate always targets ENNA in your workflow
-  outcome_vars <- "enna_sqrt"
+  outcome_vars <- "enna_hellinger"
   outcomes_str <- outcome_vars
 
 } else if (opt$mode == "multivariate") {
@@ -120,11 +93,16 @@ n_outcomes <- length(outcome_vars)
 
 # F. Define Random Formula safely
 if (opt$random == "1") {
-  random_formula <- ~1
-  rand_label <- "RI" # For filename (Random Intercept)
+  random_formula <- ~ 1
+  rand_label     <- "RI" # Random Intercept
+} else if (opt$random == "time") {
+  random_formula <- ~ time
+  rand_label     <- "RS" # Random Slope (Linear)
+} else if (opt$random == "time_quad") {
+  random_formula <- ~ time + I(time^2)
+  rand_label     <- "RQ" # Random Quadratic
 } else {
-  random_formula <- ~time
-  rand_label <- "RS" # For filename (Random Slope)
+  stop("Invalid --random option provided.")
 }
 
 message("------------------------------------------------")

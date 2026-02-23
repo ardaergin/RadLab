@@ -1,3 +1,4 @@
+# analysis/config.R
 
 suppressPackageStartupMessages({
   library(optparse)
@@ -7,21 +8,21 @@ option_list <- list(
   # --- Input/Output ---
   make_option(
     c("-f", "--file"), type = "character",
-    default = "experiments_with_transforms.rds",
+    default = "experiments_processed.rds",
     help = "Path to input data file. [default= %default]"
   ),
 
   # --- Transform ---
   make_option(
     c("-t", "--transform"), type = "character",
-    default = "sqrt",
-    help = "Transformation to use: 'sqrt' or 'ilr'. [default= %default]"
+    default = "hellinger",
+    help = "Transformation to use: 'hellinger' or 'ilr'. [default= %default]"
   ),
 
   make_option(
     c("--basis"), type = "character",
-    default = "theory",
-    help = "For ILR transform only: 'theory' or 'empirical'. [default= %default]"
+    default = "A",
+    help = "For ILR transform only. The basis matrix name that follows 'ilr_' (e.g., 'A', 'B'). [default= %default]"
   ),
 
   # --- Model Settings ---
@@ -40,12 +41,12 @@ option_list <- list(
   make_option(
     c("-r", "--random"), type = "character",
     default = "time",
-    help = "Random effect: '1' (Intercept only) or 'time' (Intercept + Slope). [default= %default]"
+    help = "Random effect: '1' (Intercept only), 'time' (Intercept + Slope), or 'time_quad' (time + I(time^2)). [default= %default]"
   ),
 
   make_option(
     "--mixture", type = "character",
-    default = "time",
+    default = "time_quad",
     help = "Mixture: 'time', 'time_quad' (time + I(time^2)). [default= %default]"
   ),
 
