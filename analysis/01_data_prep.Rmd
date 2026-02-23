@@ -2,6 +2,7 @@
 title: "Radicalization Lab"
 subtitle: "Code sheet 1: Data preparation"
 author: "Arda Ergin"
+date: "`r Sys.Date()`"
 output:
   rmdformats::downcute:
     downcute_theme: "chaos"

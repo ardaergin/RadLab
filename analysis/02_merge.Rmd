@@ -2,6 +2,7 @@
 title: "Radicalization Lab"
 subtitle: "Code sheet 2: Merging Experiments"
 author: "Arda Ergin"
+date: "`r Sys.Date()`"
 output:
   rmdformats::downcute:
     downcute_theme: "chaos"
