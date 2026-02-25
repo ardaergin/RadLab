@@ -1,0 +1,66 @@
+#!/bin/bash
+#SBATCH --job-name=RadLab
+#SBATCH --output=outputs/logs/%j.txt
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
+#SBATCH --time=24:00:00
+#SBATCH --partition=genoa
+
+# --- 1. DEFINE PERSISTENT STORAGE DIRECTORIES ---
+PERSISTENT_PROJECT_DIR=$PWD
+PERSISTENT_MLRUNS_DIR=$PERSISTENT_PROJECT_DIR/outputs/mlruns
+PERSISTENT_LOGS_DIR=$PERSISTENT_PROJECT_DIR/outputs/logs
+
+# --- 2. DEFINE SCRATCH SPACE DIRECTORIES ---
+SCRATCH_MLRUNS_DIR=$TMPDIR/outputs/mlruns
+
+# Ensure persistent directories exist
+mkdir -p $PERSISTENT_MLRUNS_DIR
+mkdir -p $PERSISTENT_LOGS_DIR
+
+# Create the scratch directory structure
+mkdir -p $SCRATCH_MLRUNS_DIR
+
+# --- 3. LOAD MODULES ---
+echo "Loading required modules..."
+module purge
+module load 2023
+module load R/4.3.2-gfbf-2023a
+module load Python/3.11.3-GCCcore-12.3.0
+
+# --- 4. ENVIRONMENT VARIABLES & PYTHON LINKING ---
+echo "Linking R to Python..."
+export RETICULATE_PYTHON=$(which python)
+export MLFLOW_PYTHON_BIN=$(which python)
+export MLFLOW_BIN=$(which mlflow)
+
+# Thread control for R
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
+# --- 5. MLFLOW ON SCRATCH DISK ---
+export MLFLOW_TRACKING_URI="file://$SCRATCH_MLRUNS_DIR"
+
+# --- 6. RUN THE R SCRIPT ---
+echo "Running K>1 Gridsearch with arguments: $@"
+cd $PERSISTENT_PROJECT_DIR
+Rscript analysis/main.R "$@"
+R_STATUS=$?
+
+# --- 7. SYNC RESULTS BACK TO PERSISTENT STORAGE ---
+if [ $R_STATUS -eq 0 ]; then
+    echo "Model completed successfully! Syncing MLflow data back to persistent storage..."
+    rsync -av --info=progress2 "$SCRATCH_MLRUNS_DIR/" "$PERSISTENT_MLRUNS_DIR/"
+    echo "Sync complete."
+else
+    echo "ERROR: R script failed with exit code $R_STATUS. Attempting to rescue logs..."
+    rsync -av "$SCRATCH_MLRUNS_DIR/" "$PERSISTENT_MLRUNS_DIR/"
+    exit $R_STATUS
+fi
+
+# --- 8. CLEAN UP ---
+echo "Cleaning up scratch space..."
+rm -rf $TMPDIR/*
+echo "Job ${SLURM_JOB_ID} fully completed."
