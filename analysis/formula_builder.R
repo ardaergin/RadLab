@@ -33,8 +33,12 @@ build_lcmm_formulas <- function(opt) {
     stop("Unknown transform type.")
   }
 
-  # 2. Controls & Time
-  time_term <- if (opt$quadratic) "time + I(time^2)" else "time"
+  # 2. Construct the time variable name
+  t_v <- paste0("time_", opt$time_suffix)
+  t_quad <- sprintf("%s + I(%s^2)", t_v, t_v)
+  time_term <- if (opt$quadratic) t_quad else t_v
+
+  # 3. Controls & RHS
   rhs <- switch(
     opt$controls,
     "none" = time_term,
@@ -61,8 +65,8 @@ build_lcmm_formulas <- function(opt) {
   random_formula <- switch(
     as.character(opt$random),
     "1" = ~ 1,
-    "2" = ~ time,
-    "3" = ~ time + I(time^2),
+    "2" = as.formula(paste("~", t_v)),
+    "3" = as.formula(paste("~", t_quad)),
     stop("Invalid --random option.")
   )
 
@@ -70,8 +74,8 @@ build_lcmm_formulas <- function(opt) {
   mixture_formula <- switch(
     as.character(opt$mixture),
     "1" = ~ 1,
-    "2" = ~ time,
-    "3" = ~ time + I(time^2),
+    "2" = as.formula(paste("~", t_v)),
+    "3" = as.formula(paste("~", t_quad)),
     NULL
   )
 

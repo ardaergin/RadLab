@@ -95,6 +95,20 @@ get_option_list <- function() {
           [default= %default]"
     ),
 
+    make_option(
+      c("--time_suffix"), type = "character",
+      default = "z",
+      help = "
+          Suffix for the time variable. 
+          Will look for a column named 'time_<suffix>'.
+          Options: 
+          - 'z'
+          - 'c'
+          - 'minmax'
+          - 'relative'
+          [default= %default]"
+    ),
+
     # Clustering Settings
     make_option(
       c("-k", "--nclass"), type = "integer",
