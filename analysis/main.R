@@ -3,15 +3,6 @@
 library(here)
 library(mlflow)
 
-# 0. Thread Safety for HPC
-Sys.setenv(
-  OMP_NUM_THREADS = "1",
-  OPENBLAS_NUM_THREADS = "1",
-  MKL_NUM_THREADS = "1",
-  VECLIB_MAXIMUM_THREADS = "1",
-  NUMEXPR_NUM_THREADS = "1"
-)
-
 # 1. Sources & Arguments
 source("analysis/config.R")
 source("analysis/formula_builder.R")
