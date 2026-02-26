@@ -39,9 +39,10 @@ fit_lcmm_gridsearch <- function(df, formulas, m_init, opt) {
   )
 
   # Strict substitution for parallel evaluation
+  # Note: MUST USE multlcmm(), and not lcmm::multlcmm()
   m_call <- substitute(
     lcmm::gridsearch(
-      m = lcmm::multlcmm(
+      m = multlcmm(
         fixed   = f_fixed,
         mixture = f_mix,
         random  = f_rand,
