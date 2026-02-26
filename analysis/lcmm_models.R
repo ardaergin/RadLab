@@ -29,7 +29,6 @@ fit_lcmm_gridsearch <- function(df, formulas, m_init, opt) {
   message("--> Initializing Cluster with ", n_cores, " cores...")
   cl <- makeCluster(n_cores, type = "PSOCK", outfile = "")
   on.exit(stopCluster(cl), add = TRUE)
-  parallel::clusterCall(cl, function(lp) .libPaths(lp), .libPaths())
   clusterEvalQ(cl,{library(lcmm);NULL})
 
   # Export everything the parallel workers need
