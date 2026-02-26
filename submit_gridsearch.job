@@ -26,7 +26,10 @@ export MLFLOW_PYTHON_BIN=$(which python)
 export MLFLOW_BIN=$(which mlflow)
 
 # --- 4. ENVIRONMENT VARIABLES ---
-# (Thread control for R)
+# Disable renv sandbox for parallel workers
+export RENV_CONFIG_SANDBOX_ENABLED=FALSE
+
+# Thread control for R
 export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
