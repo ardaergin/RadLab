@@ -127,10 +127,20 @@ get_option_list <- function() {
     ),
 
     make_option(
-      c("--maxiter"), type = "integer",
-      default = 200,
+      c("--lcmm_maxiter"), type = "integer",
+      default = 1000,
       help = "
-          Maximum iterations for optimization. 
+          Maximum iterations for lcmm::multlcmm.
+          I.e., for the final model optimization.
+          [default= %default]"
+    ),
+
+    make_option(
+      c("--grid_maxiter"), type = "integer",
+      default = 15,
+      help = "
+          Maximum iterations for lcmm::gridsearch.
+          I.e., for the preliminary gridsearch exploratory models.
           [default= %default]"
     )
   )

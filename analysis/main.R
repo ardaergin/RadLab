@@ -34,11 +34,16 @@ message("=== MODEL ===")
 message("FORMULA:")
 message("  Fixed Effects:  ", format(formulas$fixed))
 message("  Random Effects: ", format(formulas$random))
-if (opt$nclass > 1) message("  Mixture: ", format(formulas$mixture))
+if (opt$nclass > 1) {
+  message("  Mixture: ", format(formulas$mixture))
+}
 message("CONFIGURATION:")
 message("  Number of classes: ", opt$nclass)
 message("  Link: ", opt$link)
-message("  Maxiter: ", opt$maxiter)
+message("  maxiter (lcmm::multlcmm)): ", opt$lcmm_maxiter)
+if (opt$nclass > 1) {
+  message("  maxiter (lcmm::gridsearch): ", format(opt$grid_maxiter))
+}
 message("------------------------------------------------")
 
 # 4. Configure MLflow

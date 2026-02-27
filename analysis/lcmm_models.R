@@ -18,7 +18,7 @@ fit_lcmm_baseline <- function(df, formulas, opt) {
     fixed = formulas$fixed,
     random = formulas$random,
     ng = 1,
-    maxiter = opt$maxiter,
+    maxiter = opt$lcmm_maxiter,
     nproc = n_cores
   )
 }
@@ -43,27 +43,30 @@ fit_lcmm_gridsearch <- function(df, formulas, m_init, opt) {
   m_call <- substitute(
     lcmm::gridsearch(
       m = multlcmm(
-        fixed   = f_fixed,
-        mixture = f_mix,
-        random  = f_rand,
-        subject = "ID",
         data    = df,
+        subject = "ID",
         link    = links,
-        ng      = K
+        fixed   = f_fixed,
+        random  = f_rand,
+        ng      = k,
+        maxiter = lcmm_max_it,
+        nproc   = 1,
+        mixture = f_mix
       ),
       rep     = reps,
-      maxiter = max_it,
+      maxiter = grid_max_it,
       minit   = m_init,
       cl      = cl
     ),
     list(
-      K = opt$nclass, 
-      links = rep(opt$link, formulas$n_outcomes), 
-      reps = opt$rep, 
-      max_it = opt$maxiter,
+      links = rep(opt$link, formulas$n_outcomes),
       f_fixed = formulas$fixed,
+      f_rand = formulas$random,
+      k = opt$nclass,
+      lcmm_max_it = opt$lcmm_maxiter,
       f_mix = formulas$mixture,
-      f_rand = formulas$random
+      grid_max_it = opt$grid_maxiter,
+      reps = opt$rep
     )
   )
 
