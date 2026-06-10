@@ -42,7 +42,7 @@ export MLFLOW_TRACKING_URI="file://$PERSISTENT_MLRUNS_DIR"
 # --- 6. RUN THE R SCRIPT ---
 echo "Running Gridsearch Phase with arguments: $@"
 cd $PERSISTENT_PROJECT_DIR
-Rscript analysis/main.R "$@" --phase gridsearch
+Rscript analysis/lcmm/main.R "$@" --phase gridsearch
 R_STATUS=$?
 echo "Job ${SLURM_JOB_ID} finished with exit code ${R_STATUS}."
 exit $R_STATUS
