@@ -42,19 +42,46 @@ get_experiment_name <- function(opt) {
 # time structure, random/mixed effects, link, etc.) so we can reliably
 # find the corresponding K=1 run for any given K.
 get_baseline_key <- function(opt) {
-  paste(
+  paste0(
     "outcomes=", opt$outcomes,
     ";controls=", opt$controls,
     ";quadratic=", isTRUE(opt$quadratic),
     ";random=", random_label(opt),
     ";link=", opt$link,
-    sep = ""
+    ";time_suffix=", opt$time_suffix
   )
 }
+
+get_gridsearch_key <- function(opt) {
+  paste0(
+    get_baseline_key(opt), 
+    ";k=", opt$nclass,
+    ";mixture=", opt$mixture
+  )
+}
+
 mlflow_find_baseline_run_id <- function(exp_name, baseline_key) {
   exp_id <- mlflow::mlflow_id(mlflow::mlflow_get_experiment(name = exp_name))
   filter <- paste0(
     'tags.baseline_key = "', baseline_key, '" AND ',
+    'tags.convergence_status = "Converged" AND ', 
+    'attributes.status = "FINISHED"'
+  )
+  runs <- mlflow::mlflow_search_runs(
+    experiment_ids = exp_id,
+    filter = filter,
+    order_by = list("attributes.start_time DESC")
+  )
+  if (is.null(runs) || nrow(runs) == 0) return(NA_character_)
+  runs$run_id[[1]]
+}
+
+mlflow_find_grid_run_id <- function(exp_name, gridsearch_key) {
+  exp_id <- mlflow::mlflow_id(mlflow::mlflow_get_experiment(name = exp_name))
+  filter <- paste0(
+    'tags.gridsearch_key = "', gridsearch_key, '" AND ',
+    'tags.phase = "gridsearch" AND ',
+    'tags.convergence_status = "Converged" AND ',
     'attributes.status = "FINISHED"'
   )
   runs <- mlflow::mlflow_search_runs(
@@ -90,10 +117,15 @@ setup_mlflow_connection <- function(exp_name) {
 
 ########## MLflow Tags ##########
 mlflow_set_lcmm_tags <- function(opt) {
+  
+  mlflow::mlflow_set_tag("phase", opt$phase)
+  
   if (opt$nclass == 1) {
     mlflow::mlflow_set_tag("baseline_key", get_baseline_key(opt))
+    mlflow::mlflow_set_tag("gridsearch_key", "NA")
   } else {
     mlflow::mlflow_set_tag("baseline_key", "NA")
+    mlflow::mlflow_set_tag("gridsearch_key", get_gridsearch_key(opt))
   }
   mlflow::mlflow_set_tag("k", as.character(opt$nclass))
   mlflow::mlflow_set_tag("outcomes", opt$outcomes)

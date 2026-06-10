@@ -7,20 +7,36 @@ detect_cores <- function() {
   if (nzchar(slurm_cpus)) as.numeric(slurm_cpus) else 1
 }
 
-fit_lcmm_baseline <- function(df, formulas, opt) {
-  message("\n===== Fitting Baseline (K=1) =====")
+fit_lcmm_estimation <- function(df, formulas, opt, m_init = NULL) {
+  message("\n===== Fitting Estimation (K=", opt$nclass, ") =====")
   n_cores <- detect_cores()
-  message("--> Utilizing nproc = ", n_cores, " for baseline optimization.")
-  lcmm::multlcmm(
-    data = df,
-    subject = "ID",
-    link = rep(opt$link, formulas$n_outcomes),
-    fixed = formulas$fixed,
-    random = formulas$random,
-    ng = 1,
-    maxiter = opt$lcmm_maxiter,
-    nproc = n_cores
-  )
+  message("--> Utilizing nproc = ", n_cores, " for optimization.")
+
+  if (opt$nclass == 1) {
+    lcmm::multlcmm(
+      data    = df,
+      subject = "ID",
+      link    = rep(opt$link, formulas$n_outcomes),
+      fixed   = formulas$fixed,
+      random  = formulas$random,
+      ng      = 1,
+      maxiter = opt$lcmm_maxiter,
+      nproc   = n_cores      
+    )
+  } else {
+    lcmm::multlcmm(
+      data    = df,
+      subject = "ID",
+      link    = rep(opt$link, formulas$n_outcomes),
+      fixed   = formulas$fixed,
+      random  = formulas$random,
+      mixture = formulas$mixture, # <-
+      ng      = opt$nclass,
+      B       = m_init$best, # <-
+      maxiter = opt$lcmm_maxiter,
+      nproc   = n_cores
+    )
+  }
 }
 
 fit_lcmm_gridsearch <- function(df, formulas, m_init, opt) {
@@ -49,7 +65,7 @@ fit_lcmm_gridsearch <- function(df, formulas, m_init, opt) {
         fixed   = f_fixed,
         random  = f_rand,
         ng      = k,
-        maxiter = lcmm_max_it,
+        maxiter = 0, # <- no final estimation in gridsearch
         nproc   = 1,
         mixture = f_mix
       ),

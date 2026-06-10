@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=RadLab_baseline
+#SBATCH --job-name=RadLab_estimation
 #SBATCH --output=outputs/logs/%j.txt
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
-#SBATCH --time=08:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=24:00:00
 #SBATCH --partition=genoa
 
 # --- 1. DEFINE PERSISTENT STORAGE DIRECTORIES ---
@@ -37,9 +37,9 @@ export NUMEXPR_NUM_THREADS=1
 export MLFLOW_TRACKING_URI="file://$PERSISTENT_MLRUNS_DIR"
 
 # --- 6. RUN THE R SCRIPT ---
-echo "Running K=1 Baseline with arguments: $@"
+echo "Running Estimation Phase with arguments: $@"
 cd $PERSISTENT_PROJECT_DIR
-Rscript analysis/main.R "$@"
+Rscript analysis/main.R "$@" --phase estimation
 R_STATUS=$?
 echo "Job ${SLURM_JOB_ID} finished with exit code ${R_STATUS}."
 exit $R_STATUS

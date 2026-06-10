@@ -2,6 +2,12 @@
 library(here)
 
 build_lcmm_formulas <- function(opt) {
+  
+  # 0. Validation
+  if ((opt$mixture == "3" || opt$random == "3") && !isTRUE(opt$quadratic)) {
+    stop("Validation Error: mixture=3 or random=3 requires --quadratic to be TRUE so I(time^2) is included in fixed effects.")
+  }
+
   # 1. Outcomes
   if (opt$transform == "hellinger") {
     hellinger_map <- c(

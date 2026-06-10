@@ -2,12 +2,13 @@
 # analysis/main.R
 library(here)
 library(mlflow)
+library(optparse)
 
 # 1. Sources & Arguments
-source("analysis/config.R")
-source("analysis/formula_builder.R")
-source("analysis/mlflow_helpers.R")
-source("analysis/lcmm_models.R")
+source(here::here("analysis", "config.R"))
+source(here::here("analysis", "formula_builder.R"))
+source(here::here("analysis", "mlflow_helpers.R"))
+source(here::here("analysis", "lcmm_models.R"))
 
 # 2. Parse Arguments
 opt <- parse_args(OptionParser(option_list = get_option_list()))
@@ -55,14 +56,20 @@ mlflow::mlflow_set_tag("mlflow.runName", run_name)
 mlflow_set_lcmm_tags(opt)
 
 tryCatch({
-  # 5. Baseline Logic (Only if K > 1)
-  if (opt$nclass > 1) {
+  # 5 & 6. Fetching Predecessors & Running Models
+  if (opt$phase == "gridsearch") {
+    if (opt$nclass == 1) {
+      stop("Gridsearch phase is only applicable for K > 1.")
+    }
+
+    # Fetch K=1 Baseline to initialize gridsearch
     baseline_key <- get_baseline_key(opt)
     baseline_run_id <- mlflow_find_baseline_run_id(exp_name, baseline_key)
     if (is.na(baseline_run_id)) {
       stop("Baseline model not found for baseline_key: ", baseline_key)
     }
-    message("Found baseline with key: ", baseline_key)
+    
+    message("Found K=1 baseline with key: ", baseline_key)
     message("Baseline run ID: ", baseline_run_id)
     m_baseline <- readRDS(
       mlflow::mlflow_download_artifacts(
@@ -70,15 +77,32 @@ tryCatch({
         run_id = baseline_run_id
       )
     )
-  }
-
-  # 6. Run Model
-  if (opt$nclass == 1) {
-    m <- fit_lcmm_baseline(df, formulas, opt)
-  } else {
+    
     m <- fit_lcmm_gridsearch(df, formulas, m_baseline, opt)
-  }
 
+  } else if (opt$phase == "estimation") {
+    if (opt$nclass == 1) {
+      # Standard K=1 Baseline Estimation (no initialization needed)
+      m <- fit_lcmm_estimation(df, formulas, opt)
+    } else {
+      grid_key <- get_gridsearch_key(opt)
+      grid_run_id <- mlflow_find_grid_run_id(exp_name, grid_key)
+      
+      if (is.na(grid_run_id)) {
+        stop("Completed gridsearch not found for gridsearch_key: ", grid_key)
+      }
+      
+      message("Found gridsearch model (run ID: ", grid_run_id, ")")
+      m_grid <- readRDS(
+        mlflow::mlflow_download_artifacts("model/model.rds", run_id = grid_run_id)
+      )
+      
+      m <- fit_lcmm_estimation(df, formulas, opt, m_init = m_grid)
+    }
+  } else {
+    stop("Invalid phase provided: ", opt$phase)
+  }
+  
   # 7. Saving & Logging
   mlflow_log_lcmm_metrics(m)
   saved_path <- mlflow_save_and_log_model(m)

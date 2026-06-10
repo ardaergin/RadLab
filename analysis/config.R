@@ -120,7 +120,7 @@ get_option_list <- function() {
 
     make_option(
       c("--rep"), type = "integer",
-      default = 30,
+      default = 64,
       help = "
           Number of gridsearch repetitions. 
           [default= %default]"
@@ -141,6 +141,16 @@ get_option_list <- function() {
       help = "
           Maximum iterations for lcmm::gridsearch.
           I.e., for the preliminary gridsearch exploratory models.
+          [default= %default]"
+    ),
+
+    make_option(
+      c("--phase"), type = "character",
+      default = "estimation",
+      help = "
+          Execution phase. Options:
+          - 'gridsearch' (gridsearch only; saves best init to MLflow)
+          - 'estimation' (runs final estimation, both for baseline, and for after-gridsearch)
           [default= %default]"
     )
   )

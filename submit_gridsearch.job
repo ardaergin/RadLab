@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=72:00:00
+#SBATCH --time=24:00:00
 #SBATCH --partition=genoa
 
 # --- 1. DEFINE PERSISTENT STORAGE DIRECTORIES ---
@@ -40,9 +40,9 @@ export NUMEXPR_NUM_THREADS=1
 export MLFLOW_TRACKING_URI="file://$PERSISTENT_MLRUNS_DIR"
 
 # --- 6. RUN THE R SCRIPT ---
-echo "Running K>1 Gridsearch with arguments: $@"
+echo "Running Gridsearch Phase with arguments: $@"
 cd $PERSISTENT_PROJECT_DIR
-Rscript analysis/main.R "$@"
+Rscript analysis/main.R "$@" --phase gridsearch
 R_STATUS=$?
 echo "Job ${SLURM_JOB_ID} finished with exit code ${R_STATUS}."
 exit $R_STATUS
